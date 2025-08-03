@@ -190,7 +190,7 @@ const HomePage: React.FC = () => {
                         </motion.button>
                     </Link>
                 </div>
-            </section>
+            </motion.section>
 
 
             {/* About Section */}
@@ -224,7 +224,7 @@ const HomePage: React.FC = () => {
                         <div className="w-full rounded-lg shadow-md bg-gray-200 animate-pulse" style={{aspectRatio: '3/4'}} />
                     )}
                 </div>
-            </section>
+            </motion.section>
             
             {/* Reviews Section */}
             <Reviews />
