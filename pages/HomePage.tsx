@@ -158,7 +158,7 @@ const HomePage: React.FC = () => {
                         </motion.button>
                     </Link>
                 </div>
-            </section>
+            </motion.section>
 
             {/* Featured Items Section */}
             <section>
@@ -254,7 +254,7 @@ const HomePage: React.FC = () => {
                         </motion.button>
                     </Link>
                 </div>
-            </section>
+            </motion.section>
 
             <Lightbox item={selectedItem} onClose={() => setSelectedItem(null)} />
         </div>
