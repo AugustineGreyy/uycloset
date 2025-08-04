@@ -146,6 +146,9 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             try {
                 await deleteClothingItem(item);
                 toast.success('Item deleted.', { id: toastId });
+                // Invalidate frontend cache
+                localStorage.removeItem('uy-closet-featured-items');
+                localStorage.removeItem('uy-closet-featured-items-timestamp');
                 fetchItemsAndCategories();
                 onUpdate();
             } catch (error: any) {
@@ -160,6 +163,9 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             try {
                 await deleteAllClothingItems();
                 toast.success('All items deleted.', { id: toastId });
+                // Invalidate frontend cache
+                localStorage.removeItem('uy-closet-featured-items');
+                localStorage.removeItem('uy-closet-featured-items-timestamp');
                 fetchItemsAndCategories();
                 onUpdate();
             } catch (error: any) {
@@ -329,12 +335,15 @@ const NewsletterPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
 
     const handleDelete = async (id: number) => {
         if (window.confirm("Delete this subscriber?")) {
+            const toastId = toast.loading("Deleting subscriber...");
             try {
                 await deleteNewsletterSubscriber(id);
-                toast.success("Subscriber deleted.");
+                toast.success("Subscriber deleted.", { id: toastId });
                 fetchSubscribers();
                 onUpdate();
-            } catch (e: any) { toast.error(e.message) }
+            } catch (e: any) { 
+                toast.error(e.message, { id: toastId });
+            }
         }
     };
 
