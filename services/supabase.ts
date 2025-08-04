@@ -120,11 +120,15 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsIn
 // CREATE POLICY "Public can read wishlists" ON public.wishlists FOR SELECT USING (true);
 // CREATE POLICY "Public can create wishlists" ON public.wishlists FOR INSERT WITH CHECK (true);
 //
-// Step 5: Create Storage Bucket and Policies
+// Step 5: Create Storage Buckets and Policies
 //
-// a) In the Supabase Dashboard, go to "Storage" and create a PUBLIC bucket named `clothing-images`.
-// b) Run the following SQL to set security policies for the bucket.
+// a) In the Supabase Dashboard, go to "Storage" and create two PUBLIC buckets:
+//    - `clothing-images` (for product items)
+//    - `review-images` (for customer review photos)
 //
+// b) Run the following SQL to set security policies for the buckets.
+//
+// -- Policies for 'clothing-images' bucket
 // CREATE POLICY "Public read access for clothing-images"
 // ON storage.objects FOR SELECT
 // USING ( bucket_id = 'clothing-images' );
@@ -132,6 +136,15 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsIn
 // CREATE POLICY "Allow authenticated access on clothing-images"
 // ON storage.objects FOR ALL TO authenticated
 // USING ( bucket_id = 'clothing-images' );
+//
+// -- Policies for 'review-images' bucket
+// CREATE POLICY "Public read access for review-images"
+// ON storage.objects FOR SELECT
+// USING ( bucket_id = 'review-images' );
+//
+// CREATE POLICY "Allow authenticated access on review-images"
+// ON storage.objects FOR ALL TO authenticated
+// USING ( bucket_id = 'review-images' );
 //
 // =================================================================================
 
@@ -142,7 +155,8 @@ if (supabaseUrl === 'YOUR_SUPABASE_URL' || supabaseAnonKey === 'YOUR_SUPABASE_AN
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-const BUCKET_NAME = 'clothing-images';
+const CLOTHING_BUCKET_NAME = 'clothing-images';
+const REVIEW_BUCKET_NAME = 'review-images';
 
 // Fetch all clothing items from the database
 export const getClothingItems = async (): Promise<ClothingItem[]> => {
@@ -195,7 +209,7 @@ export const addClothingItem = async (
     const filePath = `items/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
+        .from(CLOTHING_BUCKET_NAME)
         .upload(filePath, file);
 
     if (uploadError) {
@@ -205,12 +219,12 @@ export const addClothingItem = async (
 
     // 2. Get public URL for the uploaded image.
     const { data: { publicUrl } } = supabase.storage
-        .from(BUCKET_NAME)
+        .from(CLOTHING_BUCKET_NAME)
         .getPublicUrl(filePath);
 
     if (!publicUrl) {
         // Clean up the orphaned image if we can't get a URL
-        await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+        await supabase.storage.from(CLOTHING_BUCKET_NAME).remove([filePath]);
         throw new Error('Could not get public URL for the image.');
     }
 
@@ -244,20 +258,20 @@ export const addClothingItem = async (
             } else {
                 // For any other error, clean up the orphaned image and throw
                 console.error('Error inserting new item:', insertError.message);
-                await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+                await supabase.storage.from(CLOTHING_BUCKET_NAME).remove([filePath]);
                 throw insertError;
             }
         }
         
         if (!data) {
-            await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+            await supabase.storage.from(CLOTHING_BUCKET_NAME).remove([filePath]);
             throw new Error('Item was created but could not be retrieved from the database.');
         }
         return data;
     }
     
     // If we exit the loop, all attempts failed. Clean up and throw.
-    await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+    await supabase.storage.from(CLOTHING_BUCKET_NAME).remove([filePath]);
     throw new Error(`Failed to generate a unique product code after ${maxAttempts} attempts.`);
 };
 
@@ -283,7 +297,7 @@ export const deleteClothingItem = async (item: ClothingItem): Promise<void> => {
     // Step 1: Delete the associated image from Supabase Storage first to prevent orphaned files.
     if (item.image_path) {
         const { error: storageError } = await supabase.storage
-            .from(BUCKET_NAME)
+            .from(CLOTHING_BUCKET_NAME)
             .remove([item.image_path]);
 
         // If an error occurs during file deletion, we stop and report it.
@@ -376,7 +390,7 @@ export const deleteAllClothingItems = async (): Promise<void> => {
     
     if (imagePaths.length > 0) {
         const { error: storageError } = await supabase.storage
-            .from(BUCKET_NAME)
+            .from(CLOTHING_BUCKET_NAME)
             .remove(imagePaths);
 
         if (storageError) {
@@ -400,42 +414,46 @@ export const deleteAllClothingItems = async (): Promise<void> => {
 // Get total storage usage from the bucket
 export const getStorageUsage = async (): Promise<number> => {
     let totalSize = 0;
-    const queue: string[] = ['']; // Start with the root directory
+    const buckets = [CLOTHING_BUCKET_NAME, REVIEW_BUCKET_NAME];
+    
+    for (const bucketName of buckets) {
+        const queue: string[] = ['']; // Start with the root directory
 
-    while (queue.length > 0) {
-        const currentPath = queue.shift()!;
-        let offset = 0;
-        const limit = 1000; // Max limit per request
-        let hasMore = true;
+        while (queue.length > 0) {
+            const currentPath = queue.shift()!;
+            let offset = 0;
+            const limit = 1000; // Max limit per request
+            let hasMore = true;
 
-        while (hasMore) {
-            const { data: files, error } = await supabase.storage
-                .from(BUCKET_NAME)
-                .list(currentPath, { limit, offset });
+            while (hasMore) {
+                const { data: files, error } = await supabase.storage
+                    .from(bucketName)
+                    .list(currentPath, { limit, offset });
 
-            if (error) {
-                console.error(`Error listing files in ${currentPath || 'root'}:`, error.message);
-                throw error;
-            }
-
-            if (!files || files.length === 0) {
-                hasMore = false;
-                continue;
-            }
-            
-            for (const file of files) {
-                if (file.id === null) { // This indicates a folder in Supabase storage listings
-                    const folderPath = currentPath ? `${currentPath}/${file.name}` : file.name;
-                    queue.push(folderPath);
-                } else if (file.metadata && typeof file.metadata.size === 'number') { // This is a file
-                    totalSize += file.metadata.size;
+                if (error) {
+                    console.error(`Error listing files in ${currentPath || 'root'} of ${bucketName}:`, error.message);
+                    throw error;
                 }
-            }
 
-            if (files.length < limit) {
-                hasMore = false;
-            } else {
-                offset += limit;
+                if (!files || files.length === 0) {
+                    hasMore = false;
+                    continue;
+                }
+                
+                for (const file of files) {
+                    if (file.id === null) { // This indicates a folder in Supabase storage listings
+                        const folderPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+                        queue.push(folderPath);
+                    } else if (file.metadata && typeof file.metadata.size === 'number') { // This is a file
+                        totalSize += file.metadata.size;
+                    }
+                }
+
+                if (files.length < limit) {
+                    hasMore = false;
+                } else {
+                    offset += limit;
+                }
             }
         }
     }
@@ -615,7 +633,7 @@ const addReviewImagesToDb = async (uploads: { file: File, altText: string | null
         const filePath = `${folder}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-            .from(BUCKET_NAME)
+            .from(REVIEW_BUCKET_NAME)
             .upload(filePath, file);
             
         if (uploadError) {
@@ -624,11 +642,11 @@ const addReviewImagesToDb = async (uploads: { file: File, altText: string | null
         }
 
         const { data: { publicUrl } } = supabase.storage
-            .from(BUCKET_NAME)
+            .from(REVIEW_BUCKET_NAME)
             .getPublicUrl(filePath);
         
         if (!publicUrl) {
-            await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+            await supabase.storage.from(REVIEW_BUCKET_NAME).remove([filePath]);
             throw new Error(`Could not get public URL for ${file.name}.`);
         }
         
@@ -644,14 +662,14 @@ const addReviewImagesToDb = async (uploads: { file: File, altText: string | null
     });
 
     if (successfulUploads.length > 0) {
-        const insertPayload: Database['public']['Tables']['review_images']['Insert'][] = successfulUploads.map(s => ({...s, alt_text: s.alt_text || undefined }));
+        const insertPayload: Database['public']['Tables']['review_images']['Insert'][] = successfulUploads;
         
         const { error } = await supabase.from('review_images').insert(insertPayload);
         
         if (error) {
             // Attempt to clean up orphaned images from this batch
             const pathsToRemove = successfulUploads.map(up => up.image_path);
-            await supabase.storage.from(BUCKET_NAME).remove(pathsToRemove);
+            await supabase.storage.from(REVIEW_BUCKET_NAME).remove(pathsToRemove);
             console.error('DB insert failed for batch, cleaned up storage:', error.message);
             throw error;
         }
@@ -670,7 +688,7 @@ export const addReviewImages = (uploads: { file: File, altText: string | null }[
 const deleteVisualAsset = async (image: ReviewImage): Promise<void> => {
     if (image.image_path) {
         const { error: storageError } = await supabase.storage
-            .from(BUCKET_NAME)
+            .from(REVIEW_BUCKET_NAME)
             .remove([image.image_path]);
         
         if (storageError) {
@@ -709,7 +727,7 @@ const deleteAllVisualAssets = async (): Promise<void> => {
     const pathsToRemove = images.map((img) => img.image_path).filter((path): path is string => !!path);
     if (pathsToRemove.length > 0) {
         const { error: storageError } = await supabase.storage
-            .from(BUCKET_NAME)
+            .from(REVIEW_BUCKET_NAME)
             .remove(pathsToRemove);
 
         if (storageError) {
