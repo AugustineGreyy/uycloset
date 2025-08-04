@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js';
 import { Database, Json } from '../database.types';
 import { ClothingItem, NewsletterSubscription, Category, SiteConfig } from '../types';
@@ -737,19 +738,14 @@ export const getNewsletterSubscribers = async (): Promise<NewsletterSubscription
 
 // Delete a subscriber by ID
 export const deleteNewsletterSubscriber = async (id: number): Promise<void> => {
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from('newsletter_subscriptions')
         .delete()
-        .eq('id', id)
-        .select();
+        .eq('id', id);
 
     if (error) {
         console.error('Error deleting subscriber:', error.message);
         throw new Error(getSetupError(error) || "Could not delete subscriber. Please try again.");
-    }
-    
-    if (!data || data.length === 0) {
-        throw new Error("Could not delete subscriber. The item may have already been deleted.");
     }
 };
 
