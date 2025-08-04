@@ -3,8 +3,8 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+  | { [key: string]: any }
+  | any[]
 
 export interface Database {
   public: {
@@ -18,13 +18,14 @@ export interface Database {
         Insert: {
           created_at?: string
           id?: number
-          name: string
+          name?: string
         }
         Update: {
           created_at?: string
           id?: number
           name?: string
         }
+        Relationships: []
       }
       clothing_items: {
         Row: {
@@ -35,15 +36,17 @@ export interface Database {
           image_url: string
           name: string
           product_code: string
+          is_review: boolean
         }
         Insert: {
-          category: string
+          category?: string
           created_at?: string
           id?: number
-          image_path: string
-          image_url: string
-          name: string
-          product_code: string
+          image_path?: string
+          image_url?: string
+          name?: string
+          product_code?: string
+          is_review?: boolean
         }
         Update: {
           category?: string
@@ -53,7 +56,9 @@ export interface Database {
           image_url?: string
           name?: string
           product_code?: string
+          is_review?: boolean
         }
+        Relationships: []
       }
       newsletter_subscriptions: {
         Row: {
@@ -63,7 +68,7 @@ export interface Database {
         }
         Insert: {
           created_at?: string
-          email: string
+          email?: string
           id?: number
         }
         Update: {
@@ -71,29 +76,7 @@ export interface Database {
           email?: string
           id?: number
         }
-      }
-      review_images: {
-        Row: {
-          alt_text: string | null
-          created_at: string
-          id: number
-          image_path: string
-          image_url: string
-        }
-        Insert: {
-          alt_text?: string | null
-          created_at?: string
-          id?: number
-          image_path: string
-          image_url: string
-        }
-        Update: {
-          alt_text?: string | null
-          created_at?: string
-          id?: number
-          image_path?: string
-          image_url?: string
-        }
+        Relationships: []
       }
       site_config: {
         Row: {
@@ -104,9 +87,9 @@ export interface Database {
         }
         Insert: {
           created_at?: string
-          key: string
+          key?: string
           updated_at?: string
-          value: Json
+          value?: Json
         }
         Update: {
           created_at?: string
@@ -114,6 +97,7 @@ export interface Database {
           updated_at?: string
           value?: Json
         }
+        Relationships: []
       }
       wishlists: {
         Row: {
@@ -124,9 +108,9 @@ export interface Database {
         }
         Insert: {
           created_at?: string
-          expires_at: string
-          id: string
-          item_ids: Json
+          expires_at?: string
+          id?: string
+          item_ids?: Json
         }
         Update: {
           created_at?: string
@@ -134,6 +118,7 @@ export interface Database {
           id?: string
           item_ids?: Json
         }
+        Relationships: []
       }
     }
     Views: {
