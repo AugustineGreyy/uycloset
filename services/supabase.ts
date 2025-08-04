@@ -854,23 +854,43 @@ export const getNewsletterSubscribers = async (): Promise<NewsletterSubscription
 
 // Delete a subscriber by ID
 export const deleteNewsletterSubscriber = async (id: number): Promise<void> => {
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('newsletter_subscriptions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
     
     if (error) {
         console.error('Error deleting subscriber:', error.message);
         throw error;
     }
+
+    if (!data || data.length === 0) {
+        throw new Error("Could not delete subscriber. The item may have already been removed or there's a permission issue.");
+    }
 };
 
 // Delete all subscribers
 export const deleteAllNewsletterSubscribers = async (): Promise<void> => {
+    const { data: subscribers, error: fetchError } = await supabase
+        .from('newsletter_subscriptions')
+        .select('id');
+    
+    if (fetchError) {
+        console.error('Error fetching subscribers for deletion:', fetchError.message);
+        throw fetchError;
+    }
+
+    if (!subscribers || subscribers.length === 0) {
+        return; // Nothing to delete
+    }
+
+    const idsToDelete = subscribers.map(sub => sub.id);
+
     const { error } = await supabase
         .from('newsletter_subscriptions')
         .delete()
-        .neq('id', -1); // Deletes all rows
+        .in('id', idsToDelete);
 
     if (error) {
         console.error('Error deleting all subscribers:', error.message);
