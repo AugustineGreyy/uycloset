@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';

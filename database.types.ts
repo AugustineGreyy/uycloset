@@ -127,7 +127,7 @@ export interface Database {
     Functions: {
       handle_site_config_update: {
         Args: Record<string, unknown>
-        Returns: unknown
+        Returns: any
       }
     }
     Enums: {
