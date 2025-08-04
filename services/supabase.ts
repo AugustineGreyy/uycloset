@@ -1,5 +1,4 @@
 
-
 import { createClient } from '@supabase/supabase-js';
 import { Database, Json } from '../database.types';
 import { ClothingItem, NewsletterSubscription, ReviewImage, Category, SiteConfig } from '../types';
@@ -232,7 +231,7 @@ export const addClothingItem = async (
         
         const { data, error: insertError } = await supabase
             .from('clothing_items')
-            .insert(newItem)
+            .insert([newItem])
             .select()
             .single();
 
@@ -501,11 +500,11 @@ export const createWishlist = async (item_ids: number[]): Promise<string> => {
 
         const { data, error } = await supabase
             .from('wishlists')
-            .insert({
+            .insert([{
                 id: newId,
                 item_ids: item_ids as Json,
                 expires_at: expiresAt.toISOString(),
-            })
+            }])
             .select('id')
             .single();
 
@@ -603,14 +602,11 @@ export const updateSiteConfig = async (configs: { key: string; value: Json }[]):
 };
 
 
-// Generic function to add a visual asset (review image)
-const addVisualAsset = async (
-    table: 'review_images',
-    folder: 'reviews',
-    uploads: { file: File, altText: string | null }[]
-): Promise<void> => {
+// Private function to add review images.
+const addReviewImagesToDb = async (uploads: { file: File, altText: string | null }[]): Promise<void> => {
     if (uploads.length === 0) return;
-
+    
+    const folder = 'reviews';
     const successfulUploads: { image_url: string; image_path: string; alt_text: string | null }[] = [];
     const uploadPromises = uploads.map(async (upload) => {
         const { file, altText } = upload;
@@ -667,14 +663,11 @@ const addVisualAsset = async (
 };
 
 // Public-facing functions for adding multiple images
-export const addReviewImages = (uploads: { file: File, altText: string | null }[]) => addVisualAsset('review_images', 'reviews', uploads);
+export const addReviewImages = (uploads: { file: File, altText: string | null }[]) => addReviewImagesToDb(uploads);
 
 
-// Generic function to delete a visual asset
-const deleteVisualAsset = async (
-    table: 'review_images',
-    image: ReviewImage
-): Promise<void> => {
+// Private function to delete a single review image.
+const deleteVisualAsset = async (image: ReviewImage): Promise<void> => {
     if (image.image_path) {
         const { error: storageError } = await supabase.storage
             .from(BUCKET_NAME)
@@ -687,7 +680,7 @@ const deleteVisualAsset = async (
     }
 
     const { error: dbError } = await supabase
-        .from(table)
+        .from('review_images')
         .delete()
         .eq('id', image.id);
 
@@ -698,17 +691,15 @@ const deleteVisualAsset = async (
 };
 
 // Public-facing functions for deleting a single image
-export const deleteReviewImage = (image: ReviewImage) => deleteVisualAsset('review_images', image);
+export const deleteReviewImage = (image: ReviewImage) => deleteVisualAsset(image);
 
-// Generic function to delete all visual assets
-const deleteAllVisualAssets = async (
-    table: 'review_images'
-): Promise<void> => {
+// Private function to delete all review images.
+const deleteAllVisualAssets = async (): Promise<void> => {
     // 1. Fetch all image paths from the table
     const { data: images, error: fetchError } = await supabase.from('review_images').select('image_path');
 
     if (fetchError) {
-        console.error(`Error fetching images from ${table}:`, fetchError.message);
+        console.error(`Error fetching images from review_images:`, fetchError.message);
         throw fetchError;
     }
     
@@ -722,25 +713,25 @@ const deleteAllVisualAssets = async (
             .remove(pathsToRemove);
 
         if (storageError) {
-            console.error(`Error bulk deleting files from storage for ${table}:`, storageError.message);
+            console.error(`Error bulk deleting files from storage for review_images:`, storageError.message);
             throw storageError; // Stop if storage deletion fails
         }
     }
 
     // 3. Delete all records from the database table
     const { error: dbError } = await supabase
-        .from(table)
+        .from('review_images')
         .delete()
         .neq('id', -1); // Condition to delete all rows
 
     if (dbError) {
-        console.error(`Error deleting records from ${table}:`, dbError.message);
+        console.error(`Error deleting records from review_images:`, dbError.message);
         throw dbError;
     }
 };
 
 // Public-facing functions for deleting all images
-export const deleteAllReviewImages = () => deleteAllVisualAssets('review_images');
+export const deleteAllReviewImages = () => deleteAllVisualAssets();
 
 // --- Category Functions ---
 
@@ -762,7 +753,7 @@ export const getCategories = async (): Promise<Category[]> => {
 export const addCategory = async (name: string): Promise<Category> => {
     const { data, error } = await supabase
         .from('categories')
-        .insert({ name })
+        .insert([{ name }])
         .select()
         .single();
     
@@ -798,7 +789,7 @@ export const addNewsletterSubscriber = async (email: string): Promise<void> => {
 
     const { error } = await supabase
         .from('newsletter_subscriptions')
-        .insert({ email });
+        .insert([{ email }]);
 
     if (error) {
         if ((error as any).code === '23505') { // Unique violation
@@ -838,14 +829,19 @@ export const getNewsletterSubscribers = async (): Promise<NewsletterSubscription
 
 // Delete a subscriber by ID
 export const deleteNewsletterSubscriber = async (id: number): Promise<void> => {
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('newsletter_subscriptions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
     if (error) {
         console.error('Error deleting subscriber:', error.message);
         throw new Error(getSetupError(error) || "Could not delete subscriber. Please try again.");
+    }
+    
+    if (!data || data.length === 0) {
+        throw new Error("Could not delete subscriber. The item may have already been deleted.");
     }
 };
 
