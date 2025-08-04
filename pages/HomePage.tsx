@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { getFeaturedItems, getClothingItems, getSetupError } from '../services/supabase';
+import { getClothingItems, getSetupError } from '../services/supabase';
 import { ClothingItem } from '../types';
 import { useWishlist } from '../contexts/WishlistContext';
 import { HeartIcon } from '../components/Icons';
@@ -75,28 +76,33 @@ const HomePage: React.FC = () => {
     useEffect(() => {
         const fetchItems = async () => {
             try {
-                const fetchFeatured = async (): Promise<ClothingItem[]> => {
-                    const cachedTimestamp = localStorage.getItem(FEATURED_ITEMS_TIMESTAMP_KEY);
-                    const cachedItemsJSON = localStorage.getItem(FEATURED_ITEMS_KEY);
-                    const now = new Date().getTime();
-
-                    if (cachedTimestamp && cachedItemsJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
-                        return JSON.parse(cachedItemsJSON);
-                    } else {
-                        const newFeatured = await getFeaturedItems();
-                        localStorage.setItem(FEATURED_ITEMS_KEY, JSON.stringify(newFeatured));
-                        localStorage.setItem(FEATURED_ITEMS_TIMESTAMP_KEY, now.toString());
-                        return newFeatured;
-                    }
-                };
-                
-                const [featured, allItemsData] = await Promise.all([
-                    fetchFeatured(),
-                    getClothingItems()
-                ]);
-                
-                setFeaturedItems(featured);
+                const allItemsData = await getClothingItems();
                 setAllItems(allItemsData);
+
+                const cachedTimestamp = localStorage.getItem(FEATURED_ITEMS_TIMESTAMP_KEY);
+                const cachedItemsJSON = localStorage.getItem(FEATURED_ITEMS_KEY);
+                const now = new Date().getTime();
+
+                if (cachedTimestamp && cachedItemsJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
+                    const itemsFromCache = JSON.parse(cachedItemsJSON);
+                    // Basic validation: ensure cache isn't empty if DB has items
+                    if (itemsFromCache.length > 0 || allItemsData.length === 0) {
+                        setFeaturedItems(itemsFromCache);
+                        setLoading(false);
+                        return;
+                    }
+                }
+                
+                // If cache is stale or invalid, select new random items
+                const shuffled = [...allItemsData].sort(() => 0.5 - Math.random());
+                const newFeatured = shuffled.slice(0, 6);
+                setFeaturedItems(newFeatured);
+
+                // Update cache
+                if (newFeatured.length > 0) {
+                    localStorage.setItem(FEATURED_ITEMS_KEY, JSON.stringify(newFeatured));
+                    localStorage.setItem(FEATURED_ITEMS_TIMESTAMP_KEY, now.toString());
+                }
 
             } catch (err: any) {
                 console.error("Failed to fetch items for homepage:", err);
@@ -262,4 +268,3 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
-                          
