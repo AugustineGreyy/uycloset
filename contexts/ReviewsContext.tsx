@@ -88,27 +88,49 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     const deleteImage = async (image: ReviewImage) => {
+        const originalImages = [...reviewImages];
+        const originalDisplayedImages = [...displayedReviewImages];
+
+        // Optimistically update state to remove the image immediately from the UI
+        setReviewImages(prev => prev.filter(i => i.id !== image.id));
+        setDisplayedReviewImages(prev => prev.filter(i => i.id !== image.id));
+        
         const toastId = toast.loading('Deleting image...');
         try {
             await deleteReviewImage(image);
             toast.success('Image deleted.', { id: toastId });
             clearDisplayCache();
+            // Refetch to ensure full consistency with the database.
+            // This also handles cases where the optimistic update might be slightly out of sync.
             await fetchImages();
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
+            // If the deletion fails, roll back to the original state
+            setReviewImages(originalImages);
+            setDisplayedReviewImages(originalDisplayedImages);
             throw error;
         }
     };
 
     const deleteAllImages = async () => {
+        const originalImages = [...reviewImages];
+        const originalDisplayedImages = [...displayedReviewImages];
+        
+        // Optimistically clear the images from the UI
+        setReviewImages([]);
+        setDisplayedReviewImages([]);
+
         const toastId = toast.loading('Deleting all review images...');
         try {
             await deleteAllReviewImages();
             toast.success('All review images deleted.', { id: toastId });
             clearDisplayCache();
-            await fetchImages();
+            await fetchImages(); // This will confirm the empty state from the database.
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
+            // If deletion fails, restore the original state
+            setReviewImages(originalImages);
+            setDisplayedReviewImages(originalDisplayedImages);
             throw error;
         }
     };
