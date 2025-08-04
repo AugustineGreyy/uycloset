@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       categories: {
@@ -29,34 +29,34 @@ export interface Database {
       }
       clothing_items: {
         Row: {
-          category: string
+          categories: string[]
           created_at: string
           id: number
           image_path: string
           image_url: string
+          is_review: boolean
           name: string
           product_code: string
-          is_review: boolean
         }
         Insert: {
-          category: string
+          categories: string[]
           created_at?: string
           id?: number
           image_path: string
           image_url: string
+          is_review?: boolean
           name: string
           product_code: string
-          is_review?: boolean
         }
         Update: {
-          category?: string
+          categories?: string[]
           created_at?: string
           id?: number
           image_path?: string
           image_url?: string
+          is_review?: boolean
           name?: string
           product_code?: string
-          is_review?: boolean
         }
         Relationships: []
       }
@@ -127,7 +127,7 @@ export interface Database {
     Functions: {
       handle_site_config_update: {
         Args: Record<string, unknown>
-        Returns: any
+        Returns: unknown
       }
     }
     Enums: {
