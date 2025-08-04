@@ -238,10 +238,10 @@ const HomePage: React.FC = () => {
                                     key={currentSlide}
                                     src={allItems[currentSlide].image_url}
                                     alt={allItems[currentSlide].name}
-                                    initial={{ opacity: 0, x: 50 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -50 }}
-                                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.8, ease: 'easeInOut' }}
                                     className="absolute top-0 left-0 w-full h-full object-cover"
                                 />
                             </AnimatePresence>
