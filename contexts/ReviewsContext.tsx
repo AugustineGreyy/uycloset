@@ -10,7 +10,7 @@ const ReviewsContext = createContext<ReviewsContextType | null>(null);
 const REVIEWS_CACHE_KEY = 'uy-closet-reviews-cache';
 const REVIEWS_TIMESTAMP_KEY = 'uy-closet-reviews-timestamp';
 const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
-const DISPLAY_COUNT = 4;
+const DISPLAY_COUNT = 6;
 
 export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [reviewImages, setReviewImages] = useState<ClothingItem[]>([]);
