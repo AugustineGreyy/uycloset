@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -36,11 +35,11 @@ const GalleryItem: React.FC<{ item: ClothingItem; onClick: () => void }> = ({ it
             onClick={onClick}
             className="relative group overflow-hidden rounded-lg shadow-md bg-gradient-to-br from-brand-accent to-white cursor-pointer"
         >
-            <div className="aspect-w-4 aspect-h-5">
+            <div className="relative pt-[125%]"> {/* 5:4 Aspect Ratio */}
                 <img
                     src={item.image_url}
-                    alt={item.category}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    alt={item.categories.join(', ')}
+                    className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
             </div>
             <div className="absolute bottom-2 left-0 right-0 flex justify-center">
@@ -65,7 +64,7 @@ const GalleryItem: React.FC<{ item: ClothingItem; onClick: () => void }> = ({ it
 
 const GalleryItemSkeleton = () => (
     <div className="overflow-hidden rounded-lg shadow-md bg-white flex flex-col animate-pulse">
-        <div className="bg-gray-200 aspect-w-4 aspect-h-5"></div>
+        <div className="relative bg-gray-200 pt-[125%]"></div>
     </div>
 );
 
@@ -111,7 +110,8 @@ const CollectionPage: React.FC = () => {
                 setItems(collectionOnlyItems);
                 
                 // Derive categories from collection items only.
-                const uniqueCategories = ['All', ...Array.from(new Set(collectionOnlyItems.map(item => item.category)))];
+                const allCategories = collectionOnlyItems.flatMap(item => item.categories);
+                const uniqueCategories = ['All', ...Array.from(new Set(allCategories))];
                 setCategories(uniqueCategories);
             } catch (err: any) {
                 const setupMsg = getSetupError(err);
@@ -133,7 +133,7 @@ const CollectionPage: React.FC = () => {
         if (activeCategory === 'All') {
             setFilteredItems(items);
         } else {
-            setFilteredItems(items.filter(item => item.category === activeCategory));
+            setFilteredItems(items.filter(item => item.categories.includes(activeCategory)));
         }
     }, [activeCategory, items]);
 
@@ -207,7 +207,7 @@ const CollectionPage: React.FC = () => {
             </div>
 
             <motion.div
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 min-h-[60vh] items-start"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-start"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
@@ -217,7 +217,7 @@ const CollectionPage: React.FC = () => {
                         <GalleryItem key={item.id} item={item} onClick={() => setSelectedItem(item)} />
                     ))
                 ) : (
-                    <div className="col-span-full flex items-center justify-center text-center py-20 text-brand-secondary border-2 border-dashed border-brand-accent rounded-lg">
+                    <div className="col-span-full flex items-center justify-center text-center py-20 text-brand-secondary border-2 border-dashed border-brand-accent rounded-lg min-h-[40vh]">
                         <p>{emptyStateMessage}</p>
                     </div>
                 )}

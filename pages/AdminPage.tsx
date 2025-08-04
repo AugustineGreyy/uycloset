@@ -163,9 +163,9 @@ const ItemManagementGridPanel: React.FC<{
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {items.map(item => (
                         <div key={item.id} className="relative group border rounded-lg overflow-hidden shadow-sm">
-                             <img src={item.image_url} alt={item.category} className="w-full h-48 object-cover"/>
+                             <img src={item.image_url} alt={item.categories.join(', ')} className="w-full h-48 object-cover"/>
                              <div className="p-2 text-sm">
-                                 <p className="font-bold truncate">{item.category}</p>
+                                 <p className="font-bold truncate" title={item.categories.join(', ')}>{item.categories.join(', ')}</p>
                                  <p className="text-xs text-gray-500 font-mono">{item.product_code}</p>
                              </div>
                              <div className="absolute top-1 right-1">
@@ -189,7 +189,7 @@ const CollectionsHubPanel: React.FC<{
     reviewItemCount: number;
 }> = ({ onUpdate, setActivePanel, collectionItemCount, reviewItemCount }) => {
     const [categories, setCategories] = useState<Category[]>([]);
-    const [newItemCategory, setNewItemCategory] = useState('');
+    const [newItemCategories, setNewItemCategories] = useState<string[]>([]);
     const [isReview, setIsReview] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,6 +207,14 @@ const CollectionsHubPanel: React.FC<{
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setFile(e.target.files[0]);
     };
+
+    const handleCategoryToggle = (categoryName: string) => {
+        setNewItemCategories(prev =>
+            prev.includes(categoryName)
+                ? prev.filter(c => c !== categoryName)
+                : [...prev, categoryName]
+        );
+    };
     
     const triggerDataRefresh = () => {
         localStorage.setItem('uy-closet-items-last-updated', Date.now().toString());
@@ -218,20 +226,20 @@ const CollectionsHubPanel: React.FC<{
 
     const handleAddItem = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newItemCategory || !file) {
-            toast.error('Please provide a category and an image.');
+        if (newItemCategories.length === 0 || !file) {
+            toast.error('Please select at least one category and an image.');
             return;
         }
 
         const toastId = toast.loading('Adding new item...');
         try {
             await addClothingItem({
-                category: newItemCategory,
+                categories: newItemCategories,
                 file,
                 is_review: isReview
             });
             toast.success('Item added successfully!', { id: toastId });
-            setNewItemCategory('');
+            setNewItemCategories([]);
             setFile(null);
             setIsReview(false);
             if(fileInputRef.current) fileInputRef.current.value = '';
@@ -247,12 +255,28 @@ const CollectionsHubPanel: React.FC<{
         <div className="space-y-8">
             <Panel title="Add New Item">
                  <form onSubmit={handleAddItem} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <select value={newItemCategory} onChange={(e) => setNewItemCategory(e.target.value)} className="w-full p-2 border rounded bg-white text-brand-text" required>
-                             <option value="" disabled>Select a category...</option>
-                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                        </select>
-                        <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" accept="image/*" required />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                        <div>
+                            <label className="block text-sm font-medium text-brand-text mb-1">Item Categories</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border rounded-md p-2 max-h-36 overflow-y-auto bg-white">
+                               {categories.length === 0 ? <p className="col-span-full text-sm text-gray-500">No categories found. Add one below.</p> : categories.map(c => (
+                                    <label key={c.id} className="flex items-center space-x-2 p-1 rounded-md hover:bg-brand-accent/50 transition-colors cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={newItemCategories.includes(c.name)}
+                                            onChange={() => handleCategoryToggle(c.name)}
+                                            className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                        />
+                                        <span className="text-sm text-brand-text">{c.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                             <label htmlFor="file-upload" className="block text-sm font-medium text-brand-text mb-1">Upload Image</label>
+                             <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" accept="image/*" required />
+                        </div>
                     </div>
                      <div className="flex items-center gap-2 pt-2">
                          <input type="checkbox" id="is-review" checked={isReview} onChange={e => setIsReview(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"/>

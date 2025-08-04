@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useReviews } from '../contexts/ReviewsContext';
@@ -12,20 +14,20 @@ const ReviewGalleryItem: React.FC<{ image: ClothingItem, onClick: () => void }> 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="group relative block cursor-pointer overflow-hidden rounded-lg shadow-md aspect-w-4 aspect-h-5 bg-brand-accent/50"
+            className="group relative block cursor-pointer overflow-hidden rounded-lg shadow-md bg-brand-accent/50 pt-[125%]"
             onClick={onClick}
         >
             <img
                 src={image.image_url}
                 alt={image.name || 'Customer review image'}
-                className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+                className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
             />
         </motion.div>
     );
 };
 
 const ReviewGallerySkeleton = () => (
-    <div className="bg-gray-200 rounded-lg animate-pulse aspect-w-4 aspect-h-5"></div>
+    <div className="relative bg-gray-200 rounded-lg animate-pulse pt-[125%]"></div>
 );
 
 const ReviewsPage: React.FC = () => {
@@ -39,7 +41,7 @@ const ReviewsPage: React.FC = () => {
     // Create a synthetic ClothingItem for the Lightbox component to show consistent info
     const syntheticItemForLightbox: ClothingItem | null = selectedImage ? {
         ...selectedImage,
-        category: 'Happy Customer',
+        categories: ['Happy Customer'],
         name: selectedImage.name || 'Customer Review',
     } : null;
 
@@ -66,7 +68,7 @@ const ReviewsPage: React.FC = () => {
             </div>
 
             <motion.div
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"

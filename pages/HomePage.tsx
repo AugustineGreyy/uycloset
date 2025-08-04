@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -35,11 +33,11 @@ const FeaturedItemCard: React.FC<{ item: ClothingItem; onClick: () => void; }> =
             onClick={onClick}
             className="relative group overflow-hidden rounded-lg shadow-lg bg-gradient-to-br from-brand-accent to-white cursor-pointer"
         >
-            <div className="aspect-w-4 aspect-h-5">
+            <div className="relative pt-[125%]"> {/* 5:4 Aspect Ratio */}
                 <img
                     src={item.image_url}
-                    alt={item.category}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    alt={item.categories?.join(' / ') || item.name}
+                    className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
             </div>
             <div className="absolute bottom-2 left-0 right-0 flex justify-center">
@@ -64,7 +62,7 @@ const FeaturedItemCard: React.FC<{ item: ClothingItem; onClick: () => void; }> =
 
 const FeaturedItemCardSkeleton = () => (
     <div className="overflow-hidden rounded-lg shadow-lg bg-white flex flex-col animate-pulse">
-        <div className="bg-gray-200 aspect-w-4 aspect-h-5"></div>
+        <div className="relative bg-gray-200 pt-[125%]"></div>
     </div>
 );
 
@@ -197,7 +195,7 @@ const HomePage: React.FC = () => {
                     Hand-picked with love, these are the pieces everyone is talking about. Discover our current favorites and top-selling styles.
                 </p>
                 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 min-h-[50vh] items-start">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 items-start">
                     {loading ? (
                         [...Array(6)].map((_, i) => <FeaturedItemCardSkeleton key={i} />)
                     ) : featuredItems.length > 0 ? (
@@ -234,57 +232,31 @@ const HomePage: React.FC = () => {
                 </div>
                 <div className="md:w-1/2 w-full">
                     {allItems.length > 0 ? (
-                        <div className="relative w-full overflow-hidden rounded-lg shadow-xl bg-gray-100" style={{aspectRatio: '3/4'}}>
-                             <AnimatePresence>
+                        <div className="relative w-full pt-[125%] overflow-hidden rounded-lg shadow-lg">
+                            <AnimatePresence>
                                 <motion.img
                                     key={currentSlide}
                                     src={allItems[currentSlide].image_url}
-                                    alt={allItems[currentSlide].category}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
+                                    alt={allItems[currentSlide].name}
+                                    initial={{ opacity: 0, x: 50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -50 }}
                                     transition={{ duration: 0.5, ease: 'easeInOut' }}
-                                    className="absolute inset-0 w-full h-full object-cover"
+                                    className="absolute top-0 left-0 w-full h-full object-cover"
                                 />
                             </AnimatePresence>
                         </div>
                     ) : (
-                        <div className="w-full rounded-lg shadow-md bg-gray-200 animate-pulse" style={{aspectRatio: '3/4'}} />
+                        <div className="relative pt-[125%] w-full overflow-hidden rounded-lg shadow-lg bg-gray-200 flex items-center justify-center text-brand-secondary">
+                            <p>Loading pretty pictures...</p>
+                        </div>
                     )}
                 </div>
             </section>
-            
-            {/* Reviews Section */}
-            <Reviews />
-
-            {/* Final Call to Action */}
-            <motion.section
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.8 }}
-                className="text-center py-20 px-4 rounded-lg bg-gradient-to-br from-brand-accent to-white shadow-xl"
-            >
-                <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-primary mb-4">
-                    Ready to Find Your Perfect Look?
-                </h2>
-                <p className="mt-4 max-w-2xl mx-auto text-lg text-brand-secondary">
-                    Explore our curated pieces available for sale or browse the entire collection to discover your next treasure.
-                </p>
-                <div className="mt-8 flex flex-wrap justify-center gap-4">
-                    <Link to="/collection">
-                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-brand-primary text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-brand-primary/90 transition-all duration-300"
-                        >
-                            View Full Collection
-                        </motion.button>
-                    </Link>
-                </div>
-            </motion.section>
 
             <Lightbox item={selectedItem} onClose={() => setSelectedItem(null)} />
+
+            <Reviews />
         </div>
     );
 };

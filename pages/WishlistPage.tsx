@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,9 +11,9 @@ import toast from 'react-hot-toast';
 
 const WishlistItemCard: React.FC<{ item: ClothingItem; onRemove: () => void }> = ({ item, onRemove }) => (
     <div className="flex items-center space-x-4 bg-gradient-to-br from-brand-accent to-white p-4 rounded-lg shadow-sm">
-        <img src={item.image_url} alt={item.category} className="w-20 h-24 object-cover rounded-md" />
+        <img src={item.image_url} alt={item.categories[0]} className="w-20 h-24 object-cover rounded-md" />
         <div className="flex-grow">
-            <h3 className="font-bold text-brand-primary font-serif">{item.category}</h3>
+            <h3 className="font-bold text-brand-primary font-serif">{item.categories.join(' / ')}</h3>
             <p className="text-xs text-gray-500 font-mono mt-1">Code: {item.product_code}</p>
         </div>
         <button
@@ -27,9 +28,9 @@ const WishlistItemCard: React.FC<{ item: ClothingItem; onRemove: () => void }> =
 
 const SharedWishlistItemCard: React.FC<{ item: ClothingItem }> = ({ item }) => (
      <div className="flex items-center space-x-4 bg-gradient-to-br from-brand-accent to-white p-4 rounded-lg shadow-sm">
-        <img src={item.image_url} alt={item.category} className="w-20 h-24 object-cover rounded-md" />
+        <img src={item.image_url} alt={item.categories[0]} className="w-20 h-24 object-cover rounded-md" />
         <div className="flex-grow">
-            <h3 className="font-bold text-brand-primary font-serif">{item.category}</h3>
+            <h3 className="font-bold text-brand-primary font-serif">{item.categories.join(' / ')}</h3>
             <p className="text-xs text-gray-500 font-mono mt-1">Code: {item.product_code}</p>
         </div>
     </div>
