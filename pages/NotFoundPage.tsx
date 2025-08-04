@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -11,7 +12,7 @@ const NotFoundPage: React.FC = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, type: 'spring', stiffness: 120 }}
             >
-                <h1 className="text-9xl font-serif font-extrabold text-brand-primary tracking-tighter">
+                <h1 className="text-8xl font-serif font-extrabold text-brand-primary tracking-tighter">
                     404
                 </h1>
             </motion.div>
@@ -21,7 +22,7 @@ const NotFoundPage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
             >
-                <h2 className="mt-4 text-3xl md:text-4xl font-serif font-bold text-brand-primary">
+                <h2 className="mt-4 text-2xl md:text-3xl font-serif font-bold text-brand-primary">
                     Oops! Page Not Found
                 </h2>
                 <p className="mt-4 max-w-lg mx-auto text-lg text-brand-secondary">

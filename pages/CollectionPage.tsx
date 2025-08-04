@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -183,7 +184,7 @@ const CollectionPage: React.FC = () => {
     return (
         <div>
             <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-brand-primary">Our Collection</h1>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary">Our Collection</h1>
                 <p className="mt-4 text-lg text-brand-secondary max-w-2xl mx-auto">
                     Browse our curated selection of thrifted gems. Click on an item to see a larger view.
                 </p>

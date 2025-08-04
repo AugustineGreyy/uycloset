@@ -1,14 +1,15 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { useAuth } from '../App';
 import { 
     supabase, getClothingItems, addClothingItem, deleteClothingItem, 
-    deleteAllClothingItems, 
+    deleteItemsByType,
     updateSiteConfig, getClothingItemCount, 
     getStorageUsage,
     getReviewItemCount, getNewsletterSubscriberCount, getNewsletterSubscribers,
     deleteNewsletterSubscriber, deleteAllNewsletterSubscribers,
-    getCategories, addCategory, deleteCategory, updateClothingItem
+    getCategories, addCategory, deleteCategory
 } from '../services/supabase';
 import { ClothingItem, NewsletterSubscription, Category, SiteConfig } from '../types';
 import { Json } from '../database.types';
@@ -20,7 +21,7 @@ import toast from 'react-hot-toast';
 import { useSiteConfig } from '../contexts/SiteConfigContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type AdminPanel = 'stats' | 'items' | 'newsletter' | 'settings';
+type AdminPanel = 'stats' | 'collections_hub' | 'manage_collection_items' | 'manage_review_items' | 'newsletter' | 'settings';
 
 // --- Reusable Panel Component ---
 const Panel: React.FC<{ title: string; children: React.ReactNode, className?: string }> = ({ title, children, className = '' }) => (
@@ -88,44 +89,127 @@ const CategoriesManager: React.FC<{ categories: Category[], onUpdate: () => void
     );
 };
 
-
-// --- Clothing Items Panel ---
-const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
+const ItemManagementGridPanel: React.FC<{
+    isReview: boolean;
+    onUpdate: () => void;
+    title: string;
+}> = ({ isReview, onUpdate, title }) => {
     const [items, setItems] = useState<ClothingItem[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
-    const [newItemCategory, setNewItemCategory] = useState('');
-    const [isReview, setIsReview] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchItemsAndCategories = useCallback(async () => {
+    const fetchItems = useCallback(async () => {
         setLoading(true);
         try {
-            const [itemData, categoryData] = await Promise.all([getClothingItems(), getCategories()]);
-            // Sort items to show reviews first
-            const sortedItems = itemData.sort((a, b) => (b.is_review === true ? 1 : 0) - (a.is_review === true ? 1 : 0));
-            setItems(sortedItems);
-            setCategories(categoryData);
+            const allItems = await getClothingItems();
+            setItems(allItems.filter(item => item.is_review === isReview));
         } catch (error: any) {
             toast.error(error.message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isReview]);
 
     useEffect(() => {
-        fetchItemsAndCategories();
-    }, [fetchItemsAndCategories]);
+        fetchItems();
+    }, [fetchItems]);
+    
+    const triggerDataRefresh = () => {
+        localStorage.setItem('uy-closet-items-last-updated', Date.now().toString());
+        localStorage.removeItem('uy-closet-featured-items');
+        localStorage.removeItem('uy-closet-featured-items-timestamp');
+        localStorage.removeItem('uy-closet-reviews-cache');
+        localStorage.removeItem('uy-closet-reviews-timestamp');
+    };
+
+    const handleDeleteItem = async (item: ClothingItem) => {
+        if (window.confirm(`Are you sure you want to delete this item? This cannot be undone.`)) {
+            const toastId = toast.loading('Deleting item...');
+            try {
+                await deleteClothingItem(item);
+                toast.success('Item deleted.', { id: toastId });
+                triggerDataRefresh();
+                fetchItems(); // Refetch this panel's items
+                onUpdate(); // Refetch global stats
+            } catch (error: any) {
+                toast.error(error.message, { id: toastId });
+            }
+        }
+    };
+    
+    const handleDeleteAll = async () => {
+        const itemType = isReview ? "review images" : "collection items";
+        if (window.confirm(`ARE YOU SURE you want to delete ALL ${itemType}? This action is permanent!`)) {
+            const toastId = toast.loading(`Deleting all ${itemType}...`);
+            try {
+                await deleteItemsByType(isReview);
+                toast.success(`All ${itemType} deleted.`, { id: toastId });
+                triggerDataRefresh();
+                fetchItems();
+                onUpdate();
+            } catch (error: any) {
+                toast.error(error.message, { id: toastId });
+            }
+        }
+    };
+
+    return (
+        <Panel title={`${title} (${items.length})`}>
+            {items.length > 0 && 
+                <button onClick={handleDeleteAll} className="float-right -mt-12 text-sm text-red-500 hover:text-red-700">
+                    Delete All
+                </button>
+            }
+            {loading ? <p>Loading items...</p> : items.length === 0 ? <p>No items found in this category.</p> :
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {items.map(item => (
+                        <div key={item.id} className="relative group border rounded-lg overflow-hidden shadow-sm">
+                             <img src={item.image_url} alt={item.category} className="w-full h-48 object-cover"/>
+                             <div className="p-2 text-sm">
+                                 <p className="font-bold truncate">{item.category}</p>
+                                 <p className="text-xs text-gray-500 font-mono">{item.product_code}</p>
+                             </div>
+                             <div className="absolute top-1 right-1">
+                                <button onClick={() => handleDeleteItem(item)} className="p-2 bg-white/70 backdrop-blur-sm text-red-500 hover:bg-red-100 rounded-full transition-all opacity-0 group-hover:opacity-100">
+                                    <TrashIcon className="w-5 h-5"/>
+                                </button>
+                             </div>
+                        </div>
+                    ))}
+                </div>
+            }
+        </Panel>
+    );
+};
+
+
+const CollectionsHubPanel: React.FC<{
+    onUpdate: () => void;
+    setActivePanel: (panel: AdminPanel) => void;
+    collectionItemCount: number;
+    reviewItemCount: number;
+}> = ({ onUpdate, setActivePanel, collectionItemCount, reviewItemCount }) => {
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [newItemCategory, setNewItemCategory] = useState('');
+    const [isReview, setIsReview] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            setCategories(await getCategories());
+        } catch (error: any) {
+            toast.error(error.message);
+        }
+    }, []);
+
+    useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setFile(e.target.files[0]);
     };
     
     const triggerDataRefresh = () => {
-        // This key is listened to by HomePage to refetch all data
         localStorage.setItem('uy-closet-items-last-updated', Date.now().toString());
-        // Also clear specific caches for immediate effect on next load
         localStorage.removeItem('uy-closet-featured-items');
         localStorage.removeItem('uy-closet-featured-items-timestamp');
         localStorage.removeItem('uy-closet-reviews-cache');
@@ -153,43 +237,12 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             if(fileInputRef.current) fileInputRef.current.value = '';
 
             triggerDataRefresh();
-            fetchItemsAndCategories();
             onUpdate();
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
         }
     };
-
-    const handleDeleteItem = async (item: ClothingItem) => {
-        if (window.confirm(`Are you sure you want to delete this item from the "${item.category}" category? This cannot be undone.`)) {
-            const toastId = toast.loading('Deleting item...');
-            try {
-                await deleteClothingItem(item);
-                toast.success('Item deleted.', { id: toastId });
-                triggerDataRefresh();
-                fetchItemsAndCategories();
-                onUpdate();
-            } catch (error: any) {
-                toast.error(error.message, { id: toastId });
-            }
-        }
-    };
-
-    const handleDeleteAll = async () => {
-         if (window.confirm("ARE YOU SURE you want to delete ALL clothing items? This action is permanent!")) {
-            const toastId = toast.loading('Deleting all items...');
-            try {
-                await deleteAllClothingItems();
-                toast.success('All items deleted.', { id: toastId });
-                triggerDataRefresh();
-                fetchItemsAndCategories();
-                onUpdate();
-            } catch (error: any) {
-                toast.error(error.message, { id: toastId });
-            }
-        }
-    }
-
+    
     return (
         <div className="space-y-8">
             <Panel title="Add New Item">
@@ -201,53 +254,33 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
                         </select>
                         <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" accept="image/*" required />
                     </div>
-                     <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-2 pt-2">
                          <input type="checkbox" id="is-review" checked={isReview} onChange={e => setIsReview(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"/>
-                         <label htmlFor="is-review" className="text-sm font-medium text-brand-text">Mark as customer review</label>
+                         <label htmlFor="is-review" className="text-sm font-medium text-brand-text">Mark as customer review image</label>
                     </div>
                     <button type="submit" className="px-4 py-2 bg-brand-primary text-white rounded hover:bg-brand-primary/90">Add Item</button>
                  </form>
-                 <CategoriesManager categories={categories} onUpdate={() => { fetchItemsAndCategories(); onUpdate(); }} />
             </Panel>
-            <Panel title={`Manage Collection Items (${items.length})`}>
-                {items.length > 0 && <button onClick={handleDeleteAll} className="float-right -mt-12 text-sm text-red-500 hover:text-red-700">Delete All</button>}
-                {loading ? <p>Loading items...</p> : items.length === 0 ? <p>No items found.</p> :
-                    <div className="w-full">
-                        <table className="w-full text-sm text-left text-brand-text">
-                            <thead className="text-xs text-brand-primary uppercase bg-brand-accent/50 hidden md:table-header-group">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Item</th>
-                                    <th scope="col" className="px-6 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="flex flex-col md:table-row-group gap-4">
-                                {items.map(item => (
-                                    <tr key={item.id} className={`${item.is_review ? 'bg-yellow-50' : 'bg-white'} border-b hover:bg-brand-bg/50 flex flex-col md:table-row p-4 md:p-0 rounded-lg shadow-md md:shadow-none`}>
-                                        <td data-label="Item" className="px-6 py-4 font-medium text-brand-text whitespace-nowrap md:w-auto">
-                                            <div className="flex items-center gap-4">
-                                                <img src={item.image_url} alt={item.category} className="w-16 h-20 object-cover rounded"/>
-                                                <div className="flex-grow">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold">{item.category}</span>
-                                                        {item.is_review && <div title="Customer Review" className="flex items-center gap-1 text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full"><StarIcon className="w-3 h-3"/> Review</div>}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 font-mono mt-1">Code: {item.product_code}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 flex justify-end">
-                                            <button onClick={() => handleDeleteItem(item)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon className="w-5 h-5"/></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                }
+
+            <Panel title="Manage Your Items">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <AdminCard
+                        icon={BoxIcon}
+                        title={`Collection Items (${collectionItemCount})`}
+                        onClick={() => setActivePanel('manage_collection_items')}
+                    />
+                    <AdminCard
+                        icon={StarIcon}
+                        title={`Review Images (${reviewItemCount})`}
+                        onClick={() => setActivePanel('manage_review_items')}
+                    />
+                </div>
+                <CategoriesManager categories={categories} onUpdate={() => { fetchCategories(); onUpdate(); }} />
             </Panel>
         </div>
     );
 };
+
 
 // --- Newsletter Panel ---
 const NewsletterPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
@@ -577,7 +610,7 @@ const AdminCard: React.FC<{ icon: React.FC<any>; title: string; onClick: () => v
         onClick={onClick}
         whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" }}
         transition={{ type: "spring", stiffness: 300 }}
-        className="p-6 bg-white rounded-lg shadow-md text-left w-full flex flex-col items-start"
+        className="p-6 bg-white rounded-lg shadow-md text-left w-full flex flex-col items-start hover:bg-brand-accent/50"
     >
         <div className="p-3 bg-brand-accent rounded-full mb-4">
             <Icon className="w-6 h-6 text-brand-primary" />
@@ -612,28 +645,44 @@ const AdminDashboard: React.FC = () => {
     useEffect(() => { fetchAllStats(); }, [fetchAllStats]);
     
     const navItems = [
-        { id: 'items', label: 'Collections', icon: BoxIcon },
+        { id: 'collections_hub', label: 'Collections', icon: BoxIcon },
         { id: 'newsletter', label: 'Newsletter', icon: MailIcon },
         { id: 'settings', label: 'Site Settings', icon: SettingsIcon },
     ] as const;
 
     const PanelContent = () => {
         switch (activePanel) {
-            case 'items': return <ClothingItemsPanel onUpdate={fetchAllStats} />;
-            case 'newsletter': return <NewsletterPanel onUpdate={fetchAllStats} />;
-            case 'settings': return <SettingsPanel onUpdate={refetchConfig} />;
-            default: return <div />;
+            case 'collections_hub':
+                return <CollectionsHubPanel onUpdate={fetchAllStats} setActivePanel={setActivePanel} collectionItemCount={stats.items - stats.reviews} reviewItemCount={stats.reviews} />;
+            case 'manage_collection_items':
+                return <ItemManagementGridPanel isReview={false} onUpdate={fetchAllStats} title="Collection Items" />;
+            case 'manage_review_items':
+                return <ItemManagementGridPanel isReview={true} onUpdate={fetchAllStats} title="Review Images" />;
+            case 'newsletter': 
+                return <NewsletterPanel onUpdate={fetchAllStats} />;
+            case 'settings': 
+                return <SettingsPanel onUpdate={refetchConfig} />;
+            default: 
+                return <div />;
+        }
+    };
+
+    const handleBack = () => {
+        if (['manage_collection_items', 'manage_review_items'].includes(activePanel)) {
+            setActivePanel('collections_hub');
+        } else {
+            setActivePanel('stats');
         }
     };
 
     const PanelViewWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
         <div>
             <button
-                onClick={() => setActivePanel('stats')}
+                onClick={handleBack}
                 className="flex items-center gap-2 mb-6 font-semibold text-brand-primary hover:text-brand-primary/80 transition-colors"
             >
                 <ChevronLeftIcon className="w-5 h-5" />
-                <span>Back to Dashboard</span>
+                <span>Back to {['manage_collection_items', 'manage_review_items'].includes(activePanel) ? 'Collections' : 'Dashboard'}</span>
             </button>
             <AnimatePresence mode="wait">
                 <motion.div

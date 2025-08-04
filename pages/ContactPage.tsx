@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, MailIcon, PhoneIcon } from '../components/Icons';
 import { motion } from 'framer-motion';
@@ -65,7 +66,7 @@ const ContactPage: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-brand-primary">Get In Touch</h1>
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary">Get In Touch</h1>
                 <p className="mt-4 text-lg text-brand-secondary max-w-2xl mx-auto">
                     We'd love to hear from you! For orders, inquiries, or collaborations, please reach out through your preferred channel below.
                 </p>
@@ -87,7 +88,7 @@ const ContactPage: React.FC = () => {
             
             {socialLinks.length > 0 && (
                 <div className="text-center">
-                    <h2 className="text-3xl font-serif font-bold text-brand-primary mb-6">Follow Our Journey</h2>
+                    <h2 className="text-2xl font-serif font-bold text-brand-primary mb-6">Follow Our Journey</h2>
                     <div className="flex justify-center items-center space-x-4 sm:space-x-8">
                         {socialLinks.map((item) => (
                             <motion.a 

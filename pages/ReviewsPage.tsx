@@ -56,8 +56,8 @@ const ReviewsPage: React.FC = () => {
     return (
         <>
             <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-brand-primary flex items-center justify-center gap-3">
-                    <StarIcon className="w-10 h-10 text-brand-secondary" />
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary flex items-center justify-center gap-3">
+                    <StarIcon className="w-9 h-9 text-brand-secondary" />
                     <span>Customer Reviews</span>
                 </h1>
                 <p className="mt-4 text-lg text-brand-secondary max-w-2xl mx-auto">

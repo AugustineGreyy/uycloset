@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -155,8 +156,8 @@ const WishlistPage: React.FC = () => {
     return (
         <div className="space-y-12">
             <div className="text-center">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-brand-primary flex items-center justify-center gap-3">
-                    <HeartIcon className="w-10 h-10 text-red-500" />
+                <h1 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary flex items-center justify-center gap-3">
+                    <HeartIcon className="w-9 h-9 text-red-500" />
                     <span>My Wishlist</span>
                 </h1>
                 <p className="mt-4 text-lg text-brand-secondary max-w-2xl mx-auto">
@@ -167,7 +168,7 @@ const WishlistPage: React.FC = () => {
             {/* My Wishlist Section */}
             <div className="bg-brand-bg/60 p-6 rounded-lg shadow-md">
                 <div className="flex justify-between items-center mb-4">
-                     <h2 className="text-2xl font-serif font-bold text-brand-primary">Your Saved Items ({wishlist.length})</h2>
+                     <h2 className="text-xl font-serif font-bold text-brand-primary">Your Saved Items ({wishlist.length})</h2>
                      {wishlist.length > 0 && (
                         <div className="flex items-center gap-2">
                              <button
@@ -246,7 +247,7 @@ const WishlistPage: React.FC = () => {
 
             {/* Shared Wishlist Section */}
             <div>
-                 <h2 className="text-2xl font-serif font-bold text-brand-primary mb-4 text-center">Retrieve a Wishlist</h2>
+                 <h2 className="text-xl font-serif font-bold text-brand-primary mb-4 text-center">Retrieve a Wishlist</h2>
                  <form onSubmit={handleRetrieveWishlist} className="max-w-xl mx-auto flex gap-2 mb-8">
                      <input 
                         type="text"

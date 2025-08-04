@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -159,7 +160,7 @@ const HomePage: React.FC = () => {
                 transition={{ duration: 0.8 }}
                 className="text-center py-20 px-4 rounded-lg bg-gradient-to-br from-brand-accent to-brand-bg shadow-inner-lg"
             >
-                <h1 className="text-5xl md:text-7xl font-serif font-extrabold text-brand-primary tracking-tight">
+                <h1 className="text-4xl md:text-6xl font-serif font-extrabold text-brand-primary tracking-tight">
                     Timeless Style, Thrifted.
                 </h1>
                 <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-brand-secondary">
@@ -189,7 +190,7 @@ const HomePage: React.FC = () => {
 
             {/* Featured Items Section */}
             <section>
-                <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary text-center mb-4">
+                <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-primary text-center mb-4">
                     Featured Items
                 </h2>
                 <p className="text-center text-lg text-brand-secondary max-w-2xl mx-auto mb-10">
@@ -223,7 +224,7 @@ const HomePage: React.FC = () => {
             {/* About Section */}
             <section className="bg-gradient-to-br from-brand-accent to-white p-10 rounded-lg shadow-xl flex flex-col md:flex-row items-center gap-10">
                 <div className="md:w-1/2 text-center md:text-left">
-                    <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary mb-4">About Uy's Closet</h2>
+                    <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-primary mb-4">About Uy's Closet</h2>
                     <p className="text-brand-text mb-4">
                         At Uy's Closet, we believe that fashion should be both stylish and sustainable. We specialize in curating a collection of high-quality, thrifted apparel—from classy gowns and flattering bodysuits to chic tops and shorts.
                     </p>
@@ -264,7 +265,7 @@ const HomePage: React.FC = () => {
                 transition={{ duration: 0.8 }}
                 className="text-center py-20 px-4 rounded-lg bg-gradient-to-br from-brand-accent to-white shadow-xl"
             >
-                <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary mb-4">
+                <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-primary mb-4">
                     Ready to Find Your Perfect Look?
                 </h2>
                 <p className="mt-4 max-w-2xl mx-auto text-lg text-brand-secondary">
