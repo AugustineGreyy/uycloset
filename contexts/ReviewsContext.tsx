@@ -7,6 +7,9 @@ import { ReviewImage, ReviewsContextType } from '../types';
 
 const ReviewsContext = createContext<ReviewsContextType | null>(null);
 
+const REVIEWS_CACHE_KEY = 'uy-closet-reviews-cache';
+const REVIEWS_TIMESTAMP_KEY = 'uy-closet-reviews-timestamp';
+
 export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [reviewImages, setReviewImages] = useState<ReviewImage[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,11 +31,17 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
         fetchImages();
     }, [fetchImages]);
 
+    const clearDisplayCache = () => {
+        localStorage.removeItem(REVIEWS_CACHE_KEY);
+        localStorage.removeItem(REVIEWS_TIMESTAMP_KEY);
+    };
+
     const addImages = async (uploads: { file: File; altText: string | null }[]) => {
         const toastId = toast.loading(`Uploading ${uploads.length} image(s)...`);
         try {
             await addReviewImages(uploads);
             toast.success('Images uploaded successfully!', { id: toastId });
+            clearDisplayCache();
             await fetchImages(); // Refetch to update the context state
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
@@ -44,8 +53,9 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
         const toastId = toast.loading('Deleting image...');
         try {
             await deleteReviewImage(image);
-            setReviewImages(prev => prev.filter(img => img.id !== image.id));
             toast.success('Image deleted.', { id: toastId });
+            clearDisplayCache();
+            await fetchImages();
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
             throw error;
@@ -56,8 +66,9 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
         const toastId = toast.loading('Deleting all review images...');
         try {
             await deleteAllReviewImages();
-            setReviewImages([]);
             toast.success('All review images deleted.', { id: toastId });
+            clearDisplayCache();
+            await fetchImages();
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
             throw error;
