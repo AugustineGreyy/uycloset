@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -27,7 +28,7 @@ const GlobalContactCTA: React.FC = () => {
                             <MailIcon className="w-16 h-16 text-brand-accent/50" />
                         </div>
                         <div className="flex-grow">
-                            <h2 className="text-3xl font-serif font-bold">Have a Question or Inquiry?</h2>
+                            <h2 className="text-2xl font-serif font-bold">Have a Question or Inquiry?</h2>
                             <p className="mt-2 text-brand-accent/80 max-w-2xl mx-auto md:mx-0">
                                 Whether you want to place an order, ask about an item, or just say hello, we're here to help.
                             </p>

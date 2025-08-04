@@ -120,7 +120,7 @@ const Header: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between py-4">
                     <div className="flex flex-col">
-                        <NavLink to="/" className="text-3xl font-serif font-bold text-brand-primary">
+                        <NavLink to="/" className="text-2xl font-serif font-bold text-brand-primary">
                            Uy's Closet
                         </NavLink>
                         <p className="text-sm text-brand-secondary mt-1 hidden sm:block">

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -76,7 +77,7 @@ const NewsletterSection = () => {
 
     return (
         <div className="text-center mb-12 pb-12 border-b border-brand-accent">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary mb-4">Join Our Style Circle</h2>
+            <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-primary mb-4">Join Our Style Circle</h2>
             <p className="text-brand-secondary max-w-xl mx-auto mb-8">
                 Be the first to know about new arrivals, exclusive sales, and styling tips. Subscribe to the Uy's Closet newsletter!
             </p>
