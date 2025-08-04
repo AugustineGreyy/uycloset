@@ -257,11 +257,6 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
         });
     };
     
-    const clearReviewCache = () => {
-        localStorage.removeItem('uy-closet-reviews-cache');
-        localStorage.removeItem('uy-closet-reviews-timestamp');
-    };
-
     const handleUpload = async () => {
         if (!files || files.length === 0) return;
         
@@ -278,7 +273,6 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
             setFiles(null);
             setAltTexts([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
-            clearReviewCache();
             onUpdate(); // Update dashboard stats
         } catch (error) {
             // Error is already toasted in context
@@ -289,7 +283,6 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
         if (window.confirm('Are you sure you want to delete this review image?')) {
             try {
                 await deleteImage(image);
-                clearReviewCache();
                 onUpdate(); // Update dashboard stats
             } catch (error) {
                  // Error is already toasted in context
@@ -301,7 +294,6 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
         if (window.confirm(`ARE YOU SURE you want to delete ALL review images? This is permanent!`)) {
             try {
                 await deleteAllImages();
-                clearReviewCache();
                 onUpdate(); // Update dashboard stats
             } catch (error) {
                 // Error is already toasted in context
