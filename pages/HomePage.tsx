@@ -160,7 +160,7 @@ const HomePage: React.FC = () => {
                 transition={{ duration: 0.8 }}
                 className="text-center py-20 px-4 rounded-lg bg-gradient-to-br from-brand-accent to-brand-bg shadow-inner-lg"
             >
-                <h1 className="text-4xl md:text-6xl font-serif font-extrabold text-brand-primary tracking-tight">
+                <h1 className="text-6xl md:text-8xl font-serif font-extrabold text-brand-primary tracking-tight">
                     Timeless Style, Thrifted.
                 </h1>
                 <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-brand-secondary">
