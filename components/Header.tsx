@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
@@ -19,8 +20,6 @@ const Header: React.FC = () => {
         color: '#6B4F4B'
     };
 
-    const getStyle = ({ isActive }: { isActive: boolean }) => isActive ? activeLinkStyle : {};
-
     const handleLogout = async () => {
         setIsMenuOpen(false); // Close mobile menu if open
         const { error } = await supabase.auth.signOut();
@@ -38,7 +37,7 @@ const Header: React.FC = () => {
                 to="/" 
                 end
                 className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                style={getStyle}
+                style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                 onClick={() => setIsMenuOpen(false)}
             >
                 Home
@@ -46,7 +45,7 @@ const Header: React.FC = () => {
             <NavLink 
                 to="/collection" 
                 className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                style={getStyle}
+                style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                 onClick={() => setIsMenuOpen(false)}
             >
                 Collection
@@ -54,7 +53,7 @@ const Header: React.FC = () => {
             <NavLink 
                 to="/reviews" 
                 className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                style={getStyle}
+                style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                 onClick={() => setIsMenuOpen(false)}
             >
                 Reviews
@@ -62,7 +61,7 @@ const Header: React.FC = () => {
              <NavLink 
                 to="/wishlist" 
                 className="relative hover:text-brand-primary transition-colors py-2 md:py-0"
-                style={getStyle}
+                style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                 onClick={() => setIsMenuOpen(false)}
             >
                 <div className="flex items-center gap-1">
@@ -78,7 +77,7 @@ const Header: React.FC = () => {
             <NavLink 
                 to="/contact" 
                 className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                style={getStyle}
+                style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                 onClick={() => setIsMenuOpen(false)}
             >
                 Contact
@@ -88,7 +87,7 @@ const Header: React.FC = () => {
                     <NavLink 
                         to="/admin" 
                         className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                        style={getStyle}
+                        style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                         onClick={() => setIsMenuOpen(false)}
                     >
                         Dashboard
@@ -106,7 +105,7 @@ const Header: React.FC = () => {
                 <NavLink 
                     to="/admin" 
                     className="hover:text-brand-primary transition-colors py-2 md:py-0"
-                    style={getStyle}
+                    style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
                     onClick={() => setIsMenuOpen(false)}
                 >
                     Admin
