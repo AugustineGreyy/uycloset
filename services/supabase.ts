@@ -403,6 +403,49 @@ export const deleteAllClothingItems = async (): Promise<void> => {
     }
 };
 
+// Delete clothing items by type (either collection items or review items)
+export const deleteItemsByType = async (is_review: boolean): Promise<void> => {
+    // Step 1: Fetch all item records of the specified type to get their image paths.
+    const { data: items, error: fetchError } = await supabase
+        .from('clothing_items')
+        .select('image_path')
+        .eq('is_review', is_review);
+
+    if (fetchError) {
+        console.error(`Error fetching items for deletion (is_review: ${is_review}):`, fetchError.message);
+        throw new Error(`Could not fetch items to delete. DB error: ${fetchError.message}`);
+    }
+
+    if (!items || items.length === 0) {
+        return; // Nothing to delete
+    }
+    
+    // Step 2: Delete all associated images from Supabase Storage.
+    const imagePaths = items.map((item) => item.image_path).filter((path): path is string => !!path);
+    
+    if (imagePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+            .from(CLOTHING_BUCKET_NAME)
+            .remove(imagePaths);
+
+        if (storageError) {
+            console.error('Error deleting images from storage:', storageError.message);
+            throw new Error(`Failed to delete image files from storage. Original error: ${storageError.message}`);
+        }
+    }
+
+    // Step 3: Delete the records from the clothing_items table.
+    const { error: dbError } = await supabase
+        .from('clothing_items')
+        .delete()
+        .eq('is_review', is_review);
+
+    if (dbError) {
+        console.error(`Error deleting items from database (is_review: ${is_review}):`, dbError.message);
+        throw new Error(`Failed to delete item records. Original error: ${dbError.message}`);
+    }
+};
+
 // Get total storage usage from the bucket
 export const getStorageUsage = async (): Promise<number> => {
     let totalSize = 0;
