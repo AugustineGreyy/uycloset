@@ -160,22 +160,6 @@ export const getClothingItems = async (): Promise<ClothingItem[]> => {
     return data || [];
 };
 
-// Fetch featured clothing items (latest 6)
-export const getFeaturedItems = async (): Promise<ClothingItem[]> => {
-    const { data, error } = await supabase
-        .from('clothing_items')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-    if (error) {
-        console.error('Error fetching featured items:', error.message);
-        throw error;
-    }
-    return data || [];
-};
-
-
 // Fetch multiple clothing items by their IDs
 export const getClothingItemsByIds = async (ids: number[]): Promise<ClothingItem[]> => {
     if (!ids || ids.length === 0) return [];
@@ -854,19 +838,14 @@ export const getNewsletterSubscribers = async (): Promise<NewsletterSubscription
 
 // Delete a subscriber by ID
 export const deleteNewsletterSubscriber = async (id: number): Promise<void> => {
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from('newsletter_subscriptions')
         .delete()
-        .eq('id', id)
-        .select();
-    
+        .eq('id', id);
+
     if (error) {
         console.error('Error deleting subscriber:', error.message);
-        throw error;
-    }
-
-    if (!data || data.length === 0) {
-        throw new Error("Could not delete subscriber. The item may have already been removed or there's a permission issue.");
+        throw new Error(getSetupError(error) || "Could not delete subscriber. Please try again.");
     }
 };
 
