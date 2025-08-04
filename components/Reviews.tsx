@@ -60,9 +60,9 @@ const Reviews: React.FC = () => {
                     See how our real customers are enjoying their purchases. Shared experiences, honest reviews, and authentic moments.
                 </p>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     {loading && displayedReviewImages.length === 0 ? (
-                        [...Array(4)].map((_, i) => <ReviewSkeletonCard key={i} />)
+                        [...Array(6)].map((_, i) => <ReviewSkeletonCard key={i} />)
                     ) : (
                         <AnimatePresence>
                             {displayedReviewImages.map((image) => (
