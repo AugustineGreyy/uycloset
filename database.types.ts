@@ -74,7 +74,7 @@ export type Database = {
       }
       review_images: {
         Row: {
-          alt_text?: string | null
+          alt_text: string | null
           created_at: string
           id: number
           image_path: string
