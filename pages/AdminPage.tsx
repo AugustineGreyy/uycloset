@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useCallback, ChangeEvent, useRef, useMemo } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { useAuth } from '../App';
 import { 
     supabase, getClothingItems, addClothingItem, deleteClothingItem, 
@@ -118,6 +119,14 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setFile(e.target.files[0]);
     };
+    
+    const triggerDataRefresh = () => {
+        // This key is listened to by HomePage to refetch all data
+        localStorage.setItem('uy-closet-items-last-updated', Date.now().toString());
+        // Also clear specific caches for immediate effect on next load
+        localStorage.removeItem('uy-closet-featured-items');
+        localStorage.removeItem('uy-closet-featured-items-timestamp');
+    };
 
     const handleAddItem = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -133,6 +142,7 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             setNewItemCategory('');
             setFile(null);
             (document.getElementById('file-upload') as HTMLInputElement).value = '';
+            triggerDataRefresh();
             fetchItemsAndCategories();
             onUpdate();
         } catch (error: any) {
@@ -146,9 +156,7 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             try {
                 await deleteClothingItem(item);
                 toast.success('Item deleted.', { id: toastId });
-                // Invalidate frontend cache
-                localStorage.removeItem('uy-closet-featured-items');
-                localStorage.removeItem('uy-closet-featured-items-timestamp');
+                triggerDataRefresh();
                 fetchItemsAndCategories();
                 onUpdate();
             } catch (error: any) {
@@ -163,9 +171,7 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
             try {
                 await deleteAllClothingItems();
                 toast.success('All items deleted.', { id: toastId });
-                // Invalidate frontend cache
-                localStorage.removeItem('uy-closet-featured-items');
-                localStorage.removeItem('uy-closet-featured-items-timestamp');
+                triggerDataRefresh();
                 fetchItemsAndCategories();
                 onUpdate();
             } catch (error: any) {
@@ -250,15 +256,29 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
             return newAlts;
         });
     };
+    
+    const clearReviewCache = () => {
+        localStorage.removeItem('uy-closet-reviews-cache');
+        localStorage.removeItem('uy-closet-reviews-timestamp');
+    };
 
     const handleUpload = async () => {
         if (!files || files.length === 0) return;
-        const uploads = Array.from(files).map((file, i) => ({ file, altText: altTexts[i] || null }));
+        
+        const uploads: { file: File, altText: string | null }[] = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files.item(i);
+            if (file) {
+                uploads.push({ file, altText: altTexts[i] || null });
+            }
+        }
+
         try {
             await addImages(uploads);
             setFiles(null);
             setAltTexts([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            clearReviewCache();
             onUpdate(); // Update dashboard stats
         } catch (error) {
             // Error is already toasted in context
@@ -269,6 +289,7 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
         if (window.confirm('Are you sure you want to delete this review image?')) {
             try {
                 await deleteImage(image);
+                clearReviewCache();
                 onUpdate(); // Update dashboard stats
             } catch (error) {
                  // Error is already toasted in context
@@ -280,6 +301,7 @@ const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) 
         if (window.confirm(`ARE YOU SURE you want to delete ALL review images? This is permanent!`)) {
             try {
                 await deleteAllImages();
+                clearReviewCache();
                 onUpdate(); // Update dashboard stats
             } catch (error) {
                 // Error is already toasted in context
@@ -334,27 +356,40 @@ const NewsletterPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
     useEffect(() => { fetchSubscribers() }, [fetchSubscribers]);
 
     const handleDelete = async (id: number) => {
-        if (window.confirm("Delete this subscriber?")) {
-            const toastId = toast.loading("Deleting subscriber...");
-            try {
-                await deleteNewsletterSubscriber(id);
-                toast.success("Subscriber deleted.", { id: toastId });
-                fetchSubscribers();
-                onUpdate();
-            } catch (e: any) { 
-                toast.error(e.message, { id: toastId });
-            }
+        if (!window.confirm("Delete this subscriber?")) return;
+
+        const originalSubscribers = subscribers;
+        const subscriberToDelete = subscribers.find(s => s.id === id);
+
+        // Optimistic UI update
+        setSubscribers(prev => prev.filter(s => s.id !== id));
+        
+        const toastId = toast.loading(`Deleting ${subscriberToDelete?.email || 'subscriber'}...`);
+        try {
+            await deleteNewsletterSubscriber(id);
+            toast.success("Subscriber deleted.", { id: toastId });
+            onUpdate(); // Update stats
+        } catch (e: any) {
+            toast.error(e.message, { id: toastId });
+            // Rollback on failure
+            setSubscribers(originalSubscribers);
         }
     };
 
     const handleDeleteAll = async () => {
-        if (window.confirm("ARE YOU SURE you want to delete ALL subscribers?")) {
-             try {
-                await deleteAllNewsletterSubscribers();
-                toast.success("All subscribers deleted.");
-                fetchSubscribers();
-                onUpdate();
-            } catch (e: any) { toast.error(e.message) }
+        if (!window.confirm("ARE YOU SURE you want to delete ALL subscribers?")) return;
+        
+        const originalSubscribers = subscribers;
+        setSubscribers([]); // Optimistic update
+        const toastId = toast.loading("Deleting all subscribers...");
+
+        try {
+            await deleteAllNewsletterSubscribers();
+            toast.success("All subscribers deleted.", { id: toastId });
+            onUpdate();
+        } catch (e: any) {
+            toast.error(e.message, { id: toastId });
+            setSubscribers(originalSubscribers); // Rollback
         }
     }
     

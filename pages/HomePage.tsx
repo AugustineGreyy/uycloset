@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { getClothingItems, getSetupError } from '../services/supabase';
@@ -13,6 +13,7 @@ import Lightbox from '../components/Lightbox';
 
 const FEATURED_ITEMS_KEY = 'uy-closet-featured-items';
 const FEATURED_ITEMS_TIMESTAMP_KEY = 'uy-closet-featured-items-timestamp';
+const ITEMS_LAST_UPDATED_KEY = 'uy-closet-items-last-updated';
 const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
 
 const FeaturedItemCard: React.FC<{ item: ClothingItem; onClick: () => void; }> = ({ item, onClick }) => {
@@ -72,53 +73,70 @@ const HomePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState<ClothingItem | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [dataVersion, setDataVersion] = useState(localStorage.getItem(ITEMS_LAST_UPDATED_KEY));
 
+    // Listen for storage changes to sync across tabs
     useEffect(() => {
-        const fetchItems = async () => {
-            try {
-                const allItemsData = await getClothingItems();
-                setAllItems(allItemsData);
-
-                const cachedTimestamp = localStorage.getItem(FEATURED_ITEMS_TIMESTAMP_KEY);
-                const cachedItemsJSON = localStorage.getItem(FEATURED_ITEMS_KEY);
-                const now = new Date().getTime();
-
-                if (cachedTimestamp && cachedItemsJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
-                    const itemsFromCache = JSON.parse(cachedItemsJSON);
-                    // Basic validation: ensure cache isn't empty if DB has items
-                    if (itemsFromCache.length > 0 || allItemsData.length === 0) {
-                        setFeaturedItems(itemsFromCache);
-                        setLoading(false);
-                        return;
-                    }
-                }
-                
-                // If cache is stale or invalid, select new random items
-                const shuffled = [...allItemsData].sort(() => 0.5 - Math.random());
-                const newFeatured = shuffled.slice(0, 6);
-                setFeaturedItems(newFeatured);
-
-                // Update cache
-                if (newFeatured.length > 0) {
-                    localStorage.setItem(FEATURED_ITEMS_KEY, JSON.stringify(newFeatured));
-                    localStorage.setItem(FEATURED_ITEMS_TIMESTAMP_KEY, now.toString());
-                }
-
-            } catch (err: any) {
-                console.error("Failed to fetch items for homepage:", err);
-                const setupError = getSetupError(err);
-                if (setupError) {
-                    toast.error(setupError, { 
-                        duration: 8000,
-                        id: 'homepage-setup-error' // prevent multiple toasts
-                    });
-                }
-            } finally {
-                setLoading(false);
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === ITEMS_LAST_UPDATED_KEY) {
+                setDataVersion(e.newValue);
             }
         };
-        fetchItems();
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+
+    const fetchItems = useCallback(async () => {
+        setLoading(true);
+        try {
+            const allItemsData = await getClothingItems();
+            setAllItems(allItemsData);
+
+            const cachedTimestamp = localStorage.getItem(FEATURED_ITEMS_TIMESTAMP_KEY);
+            const cachedItemsJSON = localStorage.getItem(FEATURED_ITEMS_KEY);
+            const now = new Date().getTime();
+
+            if (cachedTimestamp && cachedItemsJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
+                const cachedItemIds: number[] = JSON.parse(cachedItemsJSON);
+                // Ensure cached items still exist in the main list
+                const validCachedItems = allItemsData.filter(item => cachedItemIds.includes(item.id));
+                
+                if (validCachedItems.length > 0) {
+                    setFeaturedItems(validCachedItems);
+                    setLoading(false);
+                    return;
+                }
+            }
+            
+            // If cache is stale or invalid, select new random items
+            const shuffled = [...allItemsData].sort(() => 0.5 - Math.random());
+            const newFeatured = shuffled.slice(0, 6);
+            setFeaturedItems(newFeatured);
+
+            // Update cache
+            if (newFeatured.length > 0) {
+                const itemIdsToCache = newFeatured.map(item => item.id);
+                localStorage.setItem(FEATURED_ITEMS_KEY, JSON.stringify(itemIdsToCache));
+                localStorage.setItem(FEATURED_ITEMS_TIMESTAMP_KEY, now.toString());
+            }
+
+        } catch (err: any) {
+            console.error("Failed to fetch items for homepage:", err);
+            const setupError = getSetupError(err);
+            if (setupError) {
+                toast.error(setupError, { 
+                    duration: 8000,
+                    id: 'homepage-setup-error' // prevent multiple toasts
+                });
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchItems();
+    }, [fetchItems, dataVersion]);
     
     useEffect(() => {
         if (allItems.length === 0) return;
