@@ -1,6 +1,6 @@
 
 
-import { Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
 export type ClothingItem = Database['public']['Tables']['clothing_items']['Row'];
@@ -32,6 +32,7 @@ export interface WishlistContextType {
 
 export interface ReviewsContextType {
     reviewImages: ReviewImage[];
+    displayedReviewImages: ReviewImage[];
     loading: boolean;
     addImages: (uploads: { file: File, altText: string | null }[]) => Promise<void>;
     deleteImage: (image: ReviewImage) => Promise<void>;
