@@ -26,9 +26,9 @@ const Lightbox: React.FC<LightboxProps> = ({ item, onClose }) => {
                         className="relative max-w-3xl max-h-[90vh] bg-brand-bg rounded-lg shadow-2xl overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <img src={item.image_url} alt={item.category} className="w-full h-auto object-contain max-h-[80vh]" />
+                        <img src={item.image_url} alt={item.categories?.join(' / ') || item.name} className="w-full h-auto object-contain max-h-[80vh]" />
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-                            <h3 className="text-xl font-bold text-white font-serif">{item.category}</h3>
+                            <h3 className="text-xl font-bold text-white font-serif">{item.categories?.join(' / ') || item.name}</h3>
                         </div>
                         <button
                             onClick={onClose}

@@ -14,20 +14,20 @@ const ReviewImageCard: React.FC<{ image: ClothingItem, onClick: () => void }> = 
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
         transition={{ duration: 0.5, ease: 'easeInOut' }}
-        className="relative aspect-w-4 aspect-h-5 cursor-pointer overflow-hidden rounded-lg shadow-lg group" 
+        className="relative group cursor-pointer overflow-hidden rounded-lg shadow-lg pt-[125%]" 
         onClick={onClick}
     >
         <img 
             src={image.image_url} 
             alt={image.name || "Customer review image"}
-            className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+            className="absolute top-0 left-0 h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
         />
     </motion.div>
 );
 
 
 const ReviewSkeletonCard: React.FC = () => (
-    <div className="bg-gray-200 rounded-lg shadow-lg animate-pulse aspect-w-4 aspect-h-5"></div>
+    <div className="relative bg-gray-200 rounded-lg shadow-lg animate-pulse pt-[125%]"></div>
 );
 
 const Reviews: React.FC = () => {
@@ -41,7 +41,7 @@ const Reviews: React.FC = () => {
     // Create a synthetic item for the Lightbox to ensure consistent display
     const syntheticItemForLightbox: ClothingItem | null = selectedImage ? {
         ...selectedImage,
-        category: 'Happy Customer',
+        categories: ['Happy Customer'],
         name: selectedImage.name || 'Customer Review',
     } : null;
 
@@ -60,7 +60,7 @@ const Reviews: React.FC = () => {
                     See how our real customers are enjoying their purchases. Shared experiences, honest reviews, and authentic moments.
                 </p>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
                     {loading && displayedReviewImages.length === 0 ? (
                         [...Array(4)].map((_, i) => <ReviewSkeletonCard key={i} />)
                     ) : (
