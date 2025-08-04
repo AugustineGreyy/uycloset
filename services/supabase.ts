@@ -684,72 +684,107 @@ const addReviewImagesToDb = async (uploads: { file: File, altText: string | null
 export const addReviewImages = (uploads: { file: File, altText: string | null }[]) => addReviewImagesToDb(uploads);
 
 
-// Private function to delete a single review image.
-const deleteVisualAsset = async (image: ReviewImage): Promise<void> => {
-    if (image.image_path) {
-        const { error: storageError } = await supabase.storage
-            .from(REVIEW_BUCKET_NAME)
-            .remove([image.image_path]);
-        
-        if (storageError) {
-            console.error('Error deleting image from storage:', storageError.message);
-            throw storageError;
-        }
-    }
-
+/**
+ * Deletes a single review image.
+ * This function prioritizes updating the database first for a consistent user experience.
+ * If the database deletion is successful, it then attempts to remove the corresponding file from storage.
+ * If storage deletion fails, it logs a critical error for manual cleanup but does not throw,
+ * ensuring the item appears deleted to the user.
+ * @param image The ReviewImage object to delete.
+ */
+export const deleteReviewImage = async (image: ReviewImage): Promise<void> => {
+    // Step 1: Delete the record from the database.
+    // This ensures the item is removed from the UI's source of truth immediately.
     const { error: dbError } = await supabase
         .from('review_images')
         .delete()
         .eq('id', image.id);
 
     if (dbError) {
-        console.error('Error deleting image from database:', dbError.message);
-        throw dbError;
+        console.error('Error deleting review image from database:', dbError.message);
+        // If we can't delete from the DB, we abort the whole operation.
+        throw new Error(`Failed to delete review image record. Original error: ${dbError.message}`);
+    }
+
+    // Step 2: If the database record was deleted successfully, delete the associated file from storage.
+    if (image.image_path) {
+        const { error: storageError } = await supabase.storage
+            .from(REVIEW_BUCKET_NAME)
+            .remove([image.image_path]);
+        
+        if (storageError) {
+            // This is a non-blocking error. The item is gone from the DB, which is what matters for the UI.
+            // We log a critical error for an admin to manually clean up the orphaned file in Supabase storage.
+            console.error(
+                `CRITICAL: DB record for review image ID ${image.id} was deleted, but its storage file could not be. ` +
+                `Manual cleanup required for path: "${image.image_path}" in bucket "${REVIEW_BUCKET_NAME}".`,
+                storageError.message
+            );
+        }
     }
 };
 
-// Public-facing functions for deleting a single image
-export const deleteReviewImage = (image: ReviewImage) => deleteVisualAsset(image);
-
-// Private function to delete all review images.
-const deleteAllVisualAssets = async (): Promise<void> => {
-    // 1. Fetch all image paths from the table
-    const { data: images, error: fetchError } = await supabase.from('review_images').select('image_path');
+/**
+ * Deletes ALL review images.
+ * This function first fetches all image records to get their storage paths.
+ * It then deletes all records from the database to immediately update the UI.
+ * Finally, it attempts to bulk-delete the files from storage.
+ * Failure in storage deletion is logged as a critical error for manual cleanup.
+ */
+export const deleteAllReviewImages = async (): Promise<void> => {
+    // Step 1: Fetch all review image records to get their storage paths before they are deleted.
+    const { data: images, error: fetchError } = await supabase
+        .from('review_images')
+        .select('id, image_path');
 
     if (fetchError) {
-        console.error(`Error fetching images from review_images:`, fetchError.message);
-        throw fetchError;
+        console.error('Error fetching review images for bulk deletion:', fetchError.message);
+        throw new Error(`Could not fetch review images to delete. DB error: ${fetchError.message}`);
     }
-    
-    if (!images || images.length === 0) return;
 
-    // 2. Delete all files from storage
-    const pathsToRemove = images.map((img) => img.image_path).filter((path): path is string => !!path);
+    if (!images || images.length === 0) {
+        return; // Nothing to delete.
+    }
+
+    // Step 2: Delete all records from the database table.
+    const idsToDelete = images.map(img => img.id);
+    const { error: dbError } = await supabase
+        .from('review_images')
+        .delete()
+        .in('id', idsToDelete);
+
+    if (dbError) {
+        console.error('Error bulk-deleting review image records from database:', dbError.message);
+        throw new Error(`Failed to delete all review image records. Original error: ${dbError.message}`);
+    }
+
+    // Step 3: If DB deletion was successful, attempt to delete all associated files from storage.
+    const pathsToRemove = images
+        .map((img) => img.image_path)
+        .filter((path): path is string => !!path);
+    
     if (pathsToRemove.length > 0) {
-        const { error: storageError } = await supabase.storage
+        const { data: deletedFiles, error: storageError } = await supabase.storage
             .from(REVIEW_BUCKET_NAME)
             .remove(pathsToRemove);
 
         if (storageError) {
-            console.error(`Error bulk deleting files from storage for review_images:`, storageError.message);
-            throw storageError; // Stop if storage deletion fails
+             console.error(
+                `CRITICAL: All review_images DB records were deleted, but bulk storage deletion failed. ` +
+                `Manual cleanup required for the following paths in bucket "${REVIEW_BUCKET_NAME}":\n` +
+                pathsToRemove.join('\n'),
+                storageError.message
+            );
+        }
+        
+        // Check for partial failures, as Supabase's remove can partially succeed.
+        if (deletedFiles && deletedFiles.length < pathsToRemove.length) {
+            console.warn(
+                `Partial storage deletion. ${pathsToRemove.length - deletedFiles.length} files may be orphaned.`
+            );
         }
     }
-
-    // 3. Delete all records from the database table
-    const { error: dbError } = await supabase
-        .from('review_images')
-        .delete()
-        .neq('id', -1); // Condition to delete all rows
-
-    if (dbError) {
-        console.error(`Error deleting records from review_images:`, dbError.message);
-        throw dbError;
-    }
 };
-
-// Public-facing functions for deleting all images
-export const deleteAllReviewImages = () => deleteAllVisualAssets();
 
 // --- Category Functions ---
 
