@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -104,8 +105,12 @@ const CollectionPage: React.FC = () => {
                 setLoading(true);
                 setError(null);
                 const data = await getClothingItems();
-                setItems(data);
-                const uniqueCategories = ['All', ...Array.from(new Set(data.map(item => item.category)))];
+                // Filter out review items from the main collection view.
+                const collectionOnlyItems = data.filter(item => !item.is_review);
+                setItems(collectionOnlyItems);
+                
+                // Derive categories from collection items only.
+                const uniqueCategories = ['All', ...Array.from(new Set(collectionOnlyItems.map(item => item.category)))];
                 setCategories(uniqueCategories);
             } catch (err: any) {
                 const setupMsg = getSetupError(err);

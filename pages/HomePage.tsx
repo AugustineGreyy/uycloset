@@ -90,7 +90,10 @@ const HomePage: React.FC = () => {
         setLoading(true);
         try {
             const allItemsData = await getClothingItems();
-            setAllItems(allItemsData);
+            // Filter out review items immediately after fetching.
+            const collectionItems = allItemsData.filter(item => !item.is_review);
+            
+            setAllItems(collectionItems); // Used for the "About Us" slideshow
 
             const cachedTimestamp = localStorage.getItem(FEATURED_ITEMS_TIMESTAMP_KEY);
             const cachedItemsJSON = localStorage.getItem(FEATURED_ITEMS_KEY);
@@ -98,8 +101,8 @@ const HomePage: React.FC = () => {
 
             if (cachedTimestamp && cachedItemsJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
                 const cachedItemIds: number[] = JSON.parse(cachedItemsJSON);
-                // Ensure cached items still exist in the main list
-                const validCachedItems = allItemsData.filter(item => cachedItemIds.includes(item.id));
+                // Validate cached items against the filtered collection list.
+                const validCachedItems = collectionItems.filter(item => cachedItemIds.includes(item.id));
                 
                 if (validCachedItems.length > 0) {
                     setFeaturedItems(validCachedItems);
@@ -108,8 +111,8 @@ const HomePage: React.FC = () => {
                 }
             }
             
-            // If cache is stale or invalid, select new random items
-            const shuffled = [...allItemsData].sort(() => 0.5 - Math.random());
+            // If cache is stale, select new random items from the filtered collection.
+            const shuffled = [...collectionItems].sort(() => 0.5 - Math.random());
             const newFeatured = shuffled.slice(0, 6);
             setFeaturedItems(newFeatured);
 

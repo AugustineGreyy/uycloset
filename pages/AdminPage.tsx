@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { useAuth } from '../App';
 import { 
@@ -7,11 +6,11 @@ import {
     deleteAllClothingItems, 
     updateSiteConfig, getClothingItemCount, 
     getStorageUsage,
-    getReviewImageCount, getNewsletterSubscriberCount, getNewsletterSubscribers,
+    getReviewItemCount, getNewsletterSubscriberCount, getNewsletterSubscribers,
     deleteNewsletterSubscriber, deleteAllNewsletterSubscribers,
     getCategories, addCategory, deleteCategory, updateClothingItem
 } from '../services/supabase';
-import { ClothingItem, ReviewImage, NewsletterSubscription, Category, SiteConfig } from '../types';
+import { ClothingItem, NewsletterSubscription, Category, SiteConfig } from '../types';
 import { Json } from '../database.types';
 import { 
     TrashIcon, UploadIcon, LogOutIcon, MailIcon, SettingsIcon, 
@@ -20,9 +19,8 @@ import {
 import toast from 'react-hot-toast';
 import { useSiteConfig } from '../contexts/SiteConfigContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useReviews } from '../contexts/ReviewsContext';
 
-type AdminPanel = 'stats' | 'items' | 'reviews' | 'newsletter' | 'settings';
+type AdminPanel = 'stats' | 'items' | 'newsletter' | 'settings';
 
 // --- Reusable Panel Component ---
 const Panel: React.FC<{ title: string; children: React.ReactNode, className?: string }> = ({ title, children, className = '' }) => (
@@ -97,13 +95,17 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [newItemCategory, setNewItemCategory] = useState('');
+    const [isReview, setIsReview] = useState(false);
     const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchItemsAndCategories = useCallback(async () => {
         setLoading(true);
         try {
             const [itemData, categoryData] = await Promise.all([getClothingItems(), getCategories()]);
-            setItems(itemData);
+            // Sort items to show reviews first
+            const sortedItems = itemData.sort((a, b) => (b.is_review === true ? 1 : 0) - (a.is_review === true ? 1 : 0));
+            setItems(sortedItems);
             setCategories(categoryData);
         } catch (error: any) {
             toast.error(error.message);
@@ -126,22 +128,30 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
         // Also clear specific caches for immediate effect on next load
         localStorage.removeItem('uy-closet-featured-items');
         localStorage.removeItem('uy-closet-featured-items-timestamp');
+        localStorage.removeItem('uy-closet-reviews-cache');
+        localStorage.removeItem('uy-closet-reviews-timestamp');
     };
 
     const handleAddItem = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newItemCategory || !file) {
-            toast.error('Please select a category and an image.');
+            toast.error('Please provide a category and an image.');
             return;
         }
 
         const toastId = toast.loading('Adding new item...');
         try {
-            await addClothingItem(newItemCategory, file);
+            await addClothingItem({
+                category: newItemCategory,
+                file,
+                is_review: isReview
+            });
             toast.success('Item added successfully!', { id: toastId });
             setNewItemCategory('');
             setFile(null);
-            (document.getElementById('file-upload') as HTMLInputElement).value = '';
+            setIsReview(false);
+            if(fileInputRef.current) fileInputRef.current.value = '';
+
             triggerDataRefresh();
             fetchItemsAndCategories();
             onUpdate();
@@ -182,20 +192,24 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
 
     return (
         <div className="space-y-8">
-            <Panel title="Add New Clothing Item">
+            <Panel title="Add New Item">
                  <form onSubmit={handleAddItem} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <select value={newItemCategory} onChange={(e) => setNewItemCategory(e.target.value)} className="w-full p-2 border rounded bg-white text-brand-text" required>
                              <option value="" disabled>Select a category...</option>
                             {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                         </select>
-                        <input type="file" id="file-upload" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" accept="image/*" required />
+                        <input type="file" id="file-upload" ref={fileInputRef} onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" accept="image/*" required />
+                    </div>
+                     <div className="flex items-center gap-2">
+                         <input type="checkbox" id="is-review" checked={isReview} onChange={e => setIsReview(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"/>
+                         <label htmlFor="is-review" className="text-sm font-medium text-brand-text">Mark as customer review</label>
                     </div>
                     <button type="submit" className="px-4 py-2 bg-brand-primary text-white rounded hover:bg-brand-primary/90">Add Item</button>
                  </form>
                  <CategoriesManager categories={categories} onUpdate={() => { fetchItemsAndCategories(); onUpdate(); }} />
             </Panel>
-            <Panel title={`Manage Clothing Items (${items.length})`}>
+            <Panel title={`Manage Collection Items (${items.length})`}>
                 {items.length > 0 && <button onClick={handleDeleteAll} className="float-right -mt-12 text-sm text-red-500 hover:text-red-700">Delete All</button>}
                 {loading ? <p>Loading items...</p> : items.length === 0 ? <p>No items found.</p> :
                     <div className="w-full">
@@ -208,13 +222,16 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
                             </thead>
                             <tbody className="flex flex-col md:table-row-group gap-4">
                                 {items.map(item => (
-                                    <tr key={item.id} className="bg-white border-b hover:bg-brand-bg/50 flex flex-col md:table-row p-4 md:p-0 rounded-lg shadow-md md:shadow-none">
+                                    <tr key={item.id} className={`${item.is_review ? 'bg-yellow-50' : 'bg-white'} border-b hover:bg-brand-bg/50 flex flex-col md:table-row p-4 md:p-0 rounded-lg shadow-md md:shadow-none`}>
                                         <td data-label="Item" className="px-6 py-4 font-medium text-brand-text whitespace-nowrap md:w-auto">
                                             <div className="flex items-center gap-4">
-                                                <img src={item.image_url} alt={item.name} className="w-16 h-20 object-cover rounded"/>
+                                                <img src={item.image_url} alt={item.category} className="w-16 h-20 object-cover rounded"/>
                                                 <div className="flex-grow">
-                                                    <div className="font-bold">{item.category}</div>
-                                                    <div className="text-xs text-gray-500 font-mono">Code: {item.product_code}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold">{item.category}</span>
+                                                        {item.is_review && <div title="Customer Review" className="flex items-center gap-1 text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full"><StarIcon className="w-3 h-3"/> Review</div>}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 font-mono mt-1">Code: {item.product_code}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -229,106 +246,6 @@ const ClothingItemsPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) =>
                 }
             </Panel>
         </div>
-    );
-};
-
-// --- Review Image Management Panel ---
-const ImageManagementPanel: React.FC<{ onUpdate: () => void }> = ({ onUpdate }) => {
-    const { reviewImages, loading, addImages, deleteImage, deleteAllImages } = useReviews();
-    const [files, setFiles] = useState<FileList | null>(null);
-    const [altTexts, setAltTexts] = useState<string[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const selectedFiles = e.target.files;
-        setFiles(selectedFiles);
-        if (selectedFiles) {
-            setAltTexts(Array(selectedFiles.length).fill(''));
-        } else {
-            setAltTexts([]);
-        }
-    };
-
-    const handleAltTextChange = (index: number, value: string) => {
-        setAltTexts(prev => {
-            const newAlts = [...prev];
-            newAlts[index] = value;
-            return newAlts;
-        });
-    };
-    
-    const handleUpload = async () => {
-        if (!files || files.length === 0) return;
-        
-        const uploads: { file: File, altText: string | null }[] = [];
-        for (let i = 0; i < files.length; i++) {
-            const file = files.item(i);
-            if (file) {
-                uploads.push({ file, altText: altTexts[i] || null });
-            }
-        }
-
-        try {
-            await addImages(uploads);
-            setFiles(null);
-            setAltTexts([]);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            onUpdate(); // Update dashboard stats
-        } catch (error) {
-            // Error is already toasted in context
-        }
-    };
-
-    const handleDelete = async (image: ReviewImage) => {
-        if (window.confirm('Are you sure you want to delete this review image?')) {
-            try {
-                await deleteImage(image);
-                onUpdate(); // Update dashboard stats
-            } catch (error) {
-                 // Error is already toasted in context
-            }
-        }
-    };
-
-    const handleDeleteAll = async () => {
-        if (window.confirm(`ARE YOU SURE you want to delete ALL review images? This is permanent!`)) {
-            try {
-                await deleteAllImages();
-                onUpdate(); // Update dashboard stats
-            } catch (error) {
-                // Error is already toasted in context
-            }
-        }
-    };
-
-    return (
-        <Panel title="Review Images">
-            <div className="mb-6 border-b pb-6">
-                <input type="file" multiple onChange={handleFileChange} ref={fileInputRef} accept="image/*" className="mb-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-accent file:text-brand-primary hover:file:bg-brand-secondary/40" />
-                {files && Array.from(files).map((file, i) => (
-                    <div key={i} className="flex gap-2 items-center mb-2">
-                        <span className="text-sm truncate flex-1">{file.name}</span>
-                        <input type="text" placeholder="Alt text (optional)" value={altTexts[i]} onChange={(e) => handleAltTextChange(i, e.target.value)} className="p-1 border rounded text-sm w-1/2 bg-white text-brand-text" />
-                    </div>
-                ))}
-                {files && files.length > 0 && <button onClick={handleUpload} className="px-4 py-2 bg-brand-primary text-white rounded hover:bg-brand-primary/90 mt-2">Upload</button>}
-            </div>
-
-            {reviewImages.length > 0 && <button onClick={handleDeleteAll} className="float-right -mt-4 text-sm text-red-500 hover:text-red-700">Delete All</button>}
-            <h4 className="font-bold mb-4">Current Images ({reviewImages.length})</h4>
-            {loading ? <p>Loading...</p> : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {reviewImages.map(img => (
-                        <div key={img.id} className="relative group border rounded-lg overflow-hidden shadow-sm">
-                            <img src={img.image_url} alt={img.alt_text || ''} className="w-full h-32 object-cover" />
-                             <div className="p-2 flex justify-end">
-                                <button onClick={() => handleDelete(img)} className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"><TrashIcon className="w-4 h-4"/></button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </Panel>
     );
 };
 
@@ -574,8 +491,8 @@ const UsageMonitorSkeleton = () => (
 );
 
 // --- Usage Monitor ---
-const UsageMonitor: React.FC<{ stats: { totalImages: number; items: number; reviews: number; storage: number; subscribers: number } }> = ({ stats }) => {
-    const { totalImages, items, reviews, storage, subscribers } = stats;
+const UsageMonitor: React.FC<{ stats: { items: number; reviews: number; storage: number; subscribers: number } }> = ({ stats }) => {
+    const { items, reviews, storage, subscribers } = stats;
     const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
     
     const STORAGE_LIMIT_BYTES = 1000 * 1024 * 1024; // 1000 MB
@@ -610,10 +527,10 @@ const UsageMonitor: React.FC<{ stats: { totalImages: number; items: number; revi
                 </div>
                 <div className="text-sm">
                     <button onClick={() => setIsBreakdownOpen(!isBreakdownOpen)} className="flex justify-between items-center w-full font-medium text-brand-text hover:text-brand-primary">
-                        <span>Total Images</span>
-                        <span className="flex items-center gap-1 font-mono text-brand-secondary">{totalImages} <ChevronLeftIcon className={`w-4 h-4 transition-transform ${isBreakdownOpen ? '-rotate-90' : 'rotate-0'}`} /></span>
+                        <span>Total Collection Items</span>
+                        <span className="flex items-center gap-1 font-mono text-brand-secondary">{items} <ChevronLeftIcon className={`w-4 h-4 transition-transform ${isBreakdownOpen ? '-rotate-90' : 'rotate-0'}`} /></span>
                     </button>
-                    <AnimatePresence>{isBreakdownOpen && (<motion.div initial="collapsed" animate="open" exit="collapsed" variants={{ open: { opacity: 1, height: 'auto', marginTop: '8px' }, collapsed: { opacity: 0, height: 0, marginTop: '0px' } }} transition={{ duration: 0.3 }} className="pl-4 border-l-2 border-brand-accent/50 text-xs"><p className="flex justify-between"><span>Clothing Items:</span> <span>{items}</span></p><p className="flex justify-between"><span>Review Images:</span> <span>{reviews}</span></p></motion.div>)}</AnimatePresence>
+                    <AnimatePresence>{isBreakdownOpen && (<motion.div initial="collapsed" animate="open" exit="collapsed" variants={{ open: { opacity: 1, height: 'auto', marginTop: '8px' }, collapsed: { opacity: 0, height: 0, marginTop: '0px' } }} transition={{ duration: 0.3 }} className="pl-4 border-l-2 border-brand-accent/50 text-xs"><p className="flex justify-between"><span>Main Collection:</span> <span>{items - reviews}</span></p><p className="flex justify-between"><span>Customer Reviews:</span> <span>{reviews}</span></p></motion.div>)}</AnimatePresence>
                 </div>
                 <div className="text-sm flex justify-between"><span className="font-medium text-brand-text">Newsletter Subscribers</span><span className="font-mono text-brand-secondary">{subscribers}</span></div>
             </div>
@@ -674,16 +591,16 @@ const AdminCard: React.FC<{ icon: React.FC<any>; title: string; onClick: () => v
 const AdminDashboard: React.FC = () => {
     const { refetchConfig } = useSiteConfig();
     const [activePanel, setActivePanel] = useState<AdminPanel>('stats');
-    const [stats, setStats] = useState({ totalImages: 0, items: 0, reviews: 0, storage: 0, subscribers: 0 });
+    const [stats, setStats] = useState({ items: 0, reviews: 0, storage: 0, subscribers: 0 });
     const [loadingStats, setLoadingStats] = useState(true);
 
     const fetchAllStats = useCallback(async () => {
         setLoadingStats(true);
         try {
             const [itemCount, reviewCount, storage, subscriberCount] = await Promise.all([
-                getClothingItemCount(), getReviewImageCount(), getStorageUsage(), getNewsletterSubscriberCount()
+                getClothingItemCount(), getReviewItemCount(), getStorageUsage(), getNewsletterSubscriberCount()
             ]);
-            setStats({ totalImages: itemCount + reviewCount, items: itemCount, reviews: reviewCount, storage, subscribers: subscriberCount });
+            setStats({ items: itemCount, reviews: reviewCount, storage, subscribers: subscriberCount });
         } catch (err: any) {
             toast.error("Failed to load dashboard stats.");
             console.error(err);
@@ -696,7 +613,6 @@ const AdminDashboard: React.FC = () => {
     
     const navItems = [
         { id: 'items', label: 'Collections', icon: BoxIcon },
-        { id: 'reviews', label: 'Review Images', icon: StarIcon },
         { id: 'newsletter', label: 'Newsletter', icon: MailIcon },
         { id: 'settings', label: 'Site Settings', icon: SettingsIcon },
     ] as const;
@@ -704,7 +620,6 @@ const AdminDashboard: React.FC = () => {
     const PanelContent = () => {
         switch (activePanel) {
             case 'items': return <ClothingItemsPanel onUpdate={fetchAllStats} />;
-            case 'reviews': return <ImageManagementPanel onUpdate={fetchAllStats} />;
             case 'newsletter': return <NewsletterPanel onUpdate={fetchAllStats} />;
             case 'settings': return <SettingsPanel onUpdate={refetchConfig} />;
             default: return <div />;

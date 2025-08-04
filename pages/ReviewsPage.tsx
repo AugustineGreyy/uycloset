@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useReviews } from '../contexts/ReviewsContext';
-import { ReviewImage, ClothingItem } from '../types';
+import { ClothingItem } from '../types';
 import Lightbox from '../components/Lightbox';
 import { StarIcon } from '../components/Icons';
 
-const ReviewGalleryItem: React.FC<{ image: ReviewImage, onClick: () => void }> = ({ image, onClick }) => {
+const ReviewGalleryItem: React.FC<{ image: ClothingItem, onClick: () => void }> = ({ image, onClick }) => {
     return (
         <motion.div
             layout
@@ -17,7 +17,7 @@ const ReviewGalleryItem: React.FC<{ image: ReviewImage, onClick: () => void }> =
         >
             <img
                 src={image.image_url}
-                alt={image.alt_text || 'Customer review image'}
+                alt={image.name || 'Customer review image'}
                 className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
             />
         </motion.div>
@@ -30,21 +30,17 @@ const ReviewGallerySkeleton = () => (
 
 const ReviewsPage: React.FC = () => {
     const { reviewImages, loading } = useReviews();
-    const [selectedImage, setSelectedImage] = useState<ReviewImage | null>(null);
+    const [selectedImage, setSelectedImage] = useState<ClothingItem | null>(null);
 
-    const handleImageClick = (image: ReviewImage) => {
+    const handleImageClick = (image: ClothingItem) => {
         setSelectedImage(image);
     };
     
-    // Create a synthetic ClothingItem for the Lightbox component
+    // Create a synthetic ClothingItem for the Lightbox component to show consistent info
     const syntheticItemForLightbox: ClothingItem | null = selectedImage ? {
-        id: selectedImage.id,
-        created_at: selectedImage.created_at,
-        image_path: selectedImage.image_path,
-        image_url: selectedImage.image_url,
-        name: selectedImage.alt_text || 'Customer Review',
+        ...selectedImage,
         category: 'Happy Customer',
-        product_code: '',
+        name: selectedImage.name || 'Customer Review',
     } : null;
 
     const containerVariants = {
