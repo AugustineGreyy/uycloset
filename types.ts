@@ -4,7 +4,6 @@ import type { Session } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
 export type ClothingItem = Database['public']['Tables']['clothing_items']['Row'];
-export type ReviewImage = Database['public']['Tables']['review_images']['Row'];
 export type NewsletterSubscription = Database['public']['Tables']['newsletter_subscriptions']['Row'];
 export type Category = Database['public']['Tables']['categories']['Row'];
 
@@ -31,10 +30,7 @@ export interface WishlistContextType {
 }
 
 export interface ReviewsContextType {
-    reviewImages: ReviewImage[];
-    displayedReviewImages: ReviewImage[];
+    reviewImages: ClothingItem[];
+    displayedReviewImages: ClothingItem[];
     loading: boolean;
-    addImages: (uploads: { file: File, altText: string | null }[]) => Promise<void>;
-    deleteImage: (image: ReviewImage) => Promise<void>;
-    deleteAllImages: () => Promise<void>;
 }
