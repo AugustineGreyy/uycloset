@@ -1,14 +1,11 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ReviewImage, ClothingItem } from '../types';
 import Lightbox from './Lightbox';
 import { useReviews } from '../contexts/ReviewsContext';
-
-const REVIEWS_CACHE_KEY = 'uy-closet-reviews-cache';
-const REVIEWS_TIMESTAMP_KEY = 'uy-closet-reviews-timestamp';
-const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
 
 const ReviewImageCard: React.FC<{ image: ReviewImage, onClick: () => void }> = ({ image, onClick }) => (
     <motion.div 
@@ -34,39 +31,9 @@ const ReviewSkeletonCard: React.FC = () => (
 );
 
 const Reviews: React.FC = () => {
-    const { reviewImages, loading } = useReviews();
+    const { reviewImages, displayedReviewImages, loading } = useReviews();
     const [selectedImage, setSelectedImage] = useState<ReviewImage | null>(null);
-    const [displayedImages, setDisplayedImages] = useState<ReviewImage[]>([]);
     
-    useEffect(() => {
-        if (loading || reviewImages.length === 0) return;
-
-        const cachedTimestamp = localStorage.getItem(REVIEWS_TIMESTAMP_KEY);
-        const cachedImagesJSON = localStorage.getItem(REVIEWS_CACHE_KEY);
-        const now = new Date().getTime();
-
-        if (cachedTimestamp && cachedImagesJSON && (now - parseInt(cachedTimestamp, 10)) < TWENTY_FOUR_HOURS_IN_MS) {
-            const cachedImageIds: number[] = JSON.parse(cachedImagesJSON);
-            const imagesFromCache = reviewImages.filter(img => cachedImageIds.includes(img.id));
-            if (imagesFromCache.length > 0) {
-                 setDisplayedImages(imagesFromCache);
-                 return;
-            }
-        }
-        
-        // If cache is stale, invalid, or empty, select new random images
-        const shuffled = [...reviewImages].sort(() => 0.5 - Math.random());
-        const newImages = shuffled.slice(0, 4);
-        setDisplayedImages(newImages);
-
-        // Update cache
-        if (newImages.length > 0) {
-            localStorage.setItem(REVIEWS_CACHE_KEY, JSON.stringify(newImages.map(img => img.id)));
-            localStorage.setItem(REVIEWS_TIMESTAMP_KEY, now.toString());
-        }
-        
-    }, [reviewImages, loading]);
-
     const handleImageClick = (image: ReviewImage) => {
         setSelectedImage(image);
     };
@@ -97,18 +64,18 @@ const Reviews: React.FC = () => {
                 </p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {loading && displayedImages.length === 0 ? (
+                    {loading && displayedReviewImages.length === 0 ? (
                         [...Array(4)].map((_, i) => <ReviewSkeletonCard key={i} />)
                     ) : (
                         <AnimatePresence>
-                            {displayedImages.map((image) => (
+                            {displayedReviewImages.map((image) => (
                                <ReviewImageCard key={image.id} image={image} onClick={() => handleImageClick(image)} />
                             ))}
                         </AnimatePresence>
                     )}
                 </div>
                 
-                {reviewImages.length > 4 && (
+                {reviewImages.length > displayedReviewImages.length && (
                     <div className="mt-12 text-center">
                         <Link to="/reviews">
                              <motion.button
