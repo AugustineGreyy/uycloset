@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ReviewImage, ClothingItem } from '../types';
+import { ClothingItem } from '../types';
 import Lightbox from './Lightbox';
 import { useReviews } from '../contexts/ReviewsContext';
 
-const ReviewImageCard: React.FC<{ image: ReviewImage, onClick: () => void }> = ({ image, onClick }) => (
+const ReviewImageCard: React.FC<{ image: ClothingItem, onClick: () => void }> = ({ image, onClick }) => (
     <motion.div 
         layout
         initial={{ opacity: 0, scale: 0.8 }}
@@ -19,7 +19,7 @@ const ReviewImageCard: React.FC<{ image: ReviewImage, onClick: () => void }> = (
     >
         <img 
             src={image.image_url} 
-            alt={image.alt_text || "Customer review image"}
+            alt={image.name || "Customer review image"}
             className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
         />
     </motion.div>
@@ -32,20 +32,17 @@ const ReviewSkeletonCard: React.FC = () => (
 
 const Reviews: React.FC = () => {
     const { reviewImages, displayedReviewImages, loading } = useReviews();
-    const [selectedImage, setSelectedImage] = useState<ReviewImage | null>(null);
+    const [selectedImage, setSelectedImage] = useState<ClothingItem | null>(null);
     
-    const handleImageClick = (image: ReviewImage) => {
+    const handleImageClick = (image: ClothingItem) => {
         setSelectedImage(image);
     };
 
+    // Create a synthetic item for the Lightbox to ensure consistent display
     const syntheticItemForLightbox: ClothingItem | null = selectedImage ? {
-        id: selectedImage.id,
-        created_at: selectedImage.created_at,
-        image_path: selectedImage.image_path,
-        image_url: selectedImage.image_url,
-        name: selectedImage.alt_text || 'Customer Review',
+        ...selectedImage,
         category: 'Happy Customer',
-        product_code: '',
+        name: selectedImage.name || 'Customer Review',
     } : null;
 
 
