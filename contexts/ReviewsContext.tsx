@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { getReviewImages, addReviewImages, deleteReviewImage, deleteAllReviewImages } from '../services/supabase';
@@ -45,9 +46,6 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
             await deleteReviewImage(image);
             setReviewImages(prev => prev.filter(img => img.id !== image.id));
             toast.success('Image deleted.', { id: toastId });
-            // Invalidate frontend cache
-            localStorage.removeItem('uy-closet-reviews-cache');
-            localStorage.removeItem('uy-closet-reviews-timestamp');
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
             throw error;
@@ -60,9 +58,6 @@ export const ReviewsProvider: React.FC<{ children: ReactNode }> = ({ children })
             await deleteAllReviewImages();
             setReviewImages([]);
             toast.success('All review images deleted.', { id: toastId });
-             // Invalidate frontend cache
-            localStorage.removeItem('uy-closet-reviews-cache');
-            localStorage.removeItem('uy-closet-reviews-timestamp');
         } catch (error: any) {
             toast.error(error.message, { id: toastId });
             throw error;
